@@ -1,0 +1,88 @@
+extends layout
+
+block content
+    #feedback
+
+    #serial-number-div
+        label Serial Number:
+        input#egg_serial_number
+
+    #serial-port-div
+        label Serial Port:
+        select#serial_ports
+            option(value="0") Choose...
+        input#connect-to-port-button.btn.btn-danger(type="button", value="List Ports")
+        input#list-ports-button.btn.btn-default(type="button", value="Connect to Port")
+
+    #getformdata
+        button#get-form-data-button Get Form Data
+
+    table(border="2")
+        tr
+            th Field
+            th Form Data
+            th Serial Data
+        tr
+            td MAC Address
+            td#form-data-mac-address
+            td#serial-data-mac-address
+        tr
+            td OpenSensors Pwd
+            td#form-data-open-sensors-password
+            td#serial-data-open-sensors-password
+        tr
+            td Shipped Firmware
+            td#form-data-shipped-firmware
+            td#serial-data-shipped-firmware
+        tr
+            td CO S/N
+            td#form-data-co-serial-number
+            td#serial-data-co-serial-number
+        tr
+            td CO Date Code
+            td#form-data-co-date-code
+            td#serial-data-co-date-code
+        tr
+            td CO Sensitivity
+            td#form-data-co-sensitivity
+            td#serial-data-co-sensitivity
+        tr
+            td CO Offset
+            td#form-data-co-offset
+            td#serial-data-co-offset
+        tr
+            td NO2 S/N
+            td#form-data-no2-serial-number
+            td#serial-data-no2-serial-number
+        tr
+            td NO2 Date Code
+            td#form-data-no2-date-code
+            td#serial-data-no2-date-code
+        tr
+            td NO2 Sensitivity
+            td#form-data-no2-sensitivity
+            td#serial-data-no2-sensitivity
+        tr
+            td NO2 Offset
+            td#form-data-no2-offset
+            td#serial-data-no2-offset
+        tr
+            td Date Shipped
+            td#form-data-date-shipped
+            td#serial-data-date-shipped
+        tr
+            td Customer Name
+            td#form-data-customer-name
+            td#serial-data-customer-name
+        tr
+            td Customer Email
+            td#form-data-customer-email
+            td#serial-data-customer-email
+        tr
+            td Customer Order #
+            td#form-data-customer-order-number
+            td#serial-data-customer-order-number
+        tr
+            td Customer Address
+            td#form-data-customer-address
+            td#serial-data-customer-address

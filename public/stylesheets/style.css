@@ -1,0 +1,13 @@
+
+body{
+    padding: 30px;
+}
+
+div{
+    padding: 10px;
+}
+
+td, th{
+    margin: 5px;
+    padding: 5px;
+}
