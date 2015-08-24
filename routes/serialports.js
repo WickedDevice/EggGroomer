@@ -118,13 +118,108 @@ router.get('/:serialNumber', function(req, res, next) {
     res.json(dataRecordBySerialNumber[req.param("serialNumber")]);
 });
 
+function commitValuesToSerialPort(objData, portName, callback){
+    var sp = new SerialPort(portName, {
+        baudrate: 115200,
+        parser: serialPort.parsers.readline("\n")
+    });
+
+    var lineCount = 0;
+    sp.on("open", function () {
+        console.log('open');
+        sp.on('data', function (data) {
+            console.log('line ' + lineCount + ': ' + data);
+            lineCount++;
+            if (lineCount == 20) {
+                waterfall([
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("aqe\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])) + "\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("no2_off " + objData["no2-offset"].trim() + "\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])) + "\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("co_off " + objData["co-offset"].trim() + "\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("mqtt_pwd " + objData["mqtt-password"].trim() + "\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("backup all\r");
+                            callback(null);
+                        }, 500);
+                    },
+                    function(callback){
+                        setTimeout(function(){
+                            sp.write("restore defaults\r");
+                            callback(null);
+                        }, 500);
+                    }
+                ],
+                function(err){
+
+                });
+            }
+
+            if(lineCount == 100){
+                setTimeout(function(){
+                    sp.close();
+                    callback(null);
+                }, 5000);
+            }
+        });
+    });
+
+
+}
+
 router.post('/commit/:serialNumber', function(req, res, next) {
+    var found_it = false;
+
     for(var entry in allPorts){
-        if(allPorts[entry]["serialNumber"] == req.param("serialNumber")){
-            console.log("found it.")
+        if(allPorts[entry]["serialNumber"] == req.param("serialNumber")) {
+            found_it = true;
             console.log(req.body);
-            res.json({"status": "OK"});
+
+            waterfall([
+                function (callback) {
+                    commitValuesToSerialPort(req.body, allPorts[entry].comName, callback);
+                }
+            ],
+            function (err, result) {
+                res.json({"status": "OK"});
+            });
+            break;
         }
+    }
+
+    if(!found_it) {
+        res.json({"status": "Not Found"});
     }
 });
 
