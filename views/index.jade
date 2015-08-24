@@ -17,6 +17,9 @@ block content
     #getformdata
         button#get-form-data-button Get Form Data
 
+    #commitformdata
+        button#commit-form-data-to-serial-port-button Commit Form Data to Serial Port
+
     table.table-striped(border="2")
         tr
             th Field
@@ -27,7 +30,11 @@ block content
             td#form-data-mac-address
             td#serial-data-mac-address
         tr
-            td OpenSensors Pwd
+            td OpenSensors Username
+            td#form-data-open-sensors-username
+            td#serial-data-open-sensors-username
+        tr
+            td OpenSensors Password
             td#form-data-open-sensors-password
             td#serial-data-open-sensors-password
         tr
