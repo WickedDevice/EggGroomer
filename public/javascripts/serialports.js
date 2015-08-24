@@ -4,9 +4,12 @@ function listPorts(){
     $("#feedback").text("Listing Serial Ports...");
     $.getJSON( '/serialports', function( data ) {
         console.log(JSON.stringify(data));
+
+        $('#serial_ports').find('option[value!=0]').remove();
+
         for(var i = 0; i < data.length; i++){
             var obj = data[i];
-            $('#serial_ports').append('<option value="' + (i+1) + '">' + obj.comName + '</option>');
+            $('#serial_ports').append('<option value="' + (i+1) + '">' + obj.serialNumber + '</option>');
             $('#serial_ports option:eq(1)').prop('selected', true);
         }
 

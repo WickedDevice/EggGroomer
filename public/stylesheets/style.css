@@ -11,3 +11,7 @@ td, th{
     margin: 5px;
     padding: 5px;
 }
+
+input, select, label{
+    margin: 5px 5px 0 0;
+}

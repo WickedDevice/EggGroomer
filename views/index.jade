@@ -11,13 +11,13 @@ block content
         label Serial Port:
         select#serial_ports
             option(value="0") Choose...
-        input#connect-to-port-button.btn.btn-danger(type="button", value="List Ports")
-        input#list-ports-button.btn.btn-default(type="button", value="Connect to Port")
+        input#connect-to-port-button.btn.btn-default(type="button", value="Connect to Port")
+        input#list-ports-button.btn.btn-default(type="button", value="List Ports")
 
     #getformdata
         button#get-form-data-button Get Form Data
 
-    table(border="2")
+    table.table-striped(border="2")
         tr
             th Field
             th Form Data
