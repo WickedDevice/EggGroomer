@@ -25,7 +25,7 @@ function backedUpOrNot(str){
 function openSerialPort(portName, obj, callback){
 
     var fieldStringSplitMap = [
-        {"    Firmware Version ": ["Shipped Firmware Version", stripTrailingBarAndTrim]},
+        {"  |       Firmware Version ": ["Shipped Firmware Version", stripTrailingBarAndTrim]},
         {"    MAC Address: ": ["CC3000 MAC address", null]},
         {" MQTT Password backed up?": ["Open Sensors .io password", backedUpOrNot]},
         {"    CO Sensitivity [nA/ppm]: ": ["CO Sensitivity", null]},
@@ -60,7 +60,7 @@ function openSerialPort(portName, obj, callback){
                     allPorts.push(obj);
                 }
                 dataRecordBySerialNumber[serialNumber] = {};
-                dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = firmwareVersion;
+                dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
             }
 
             parts = data.split("   Firmware Version ");
