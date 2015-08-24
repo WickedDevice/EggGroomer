@@ -69,8 +69,8 @@ function openSerialPort(portName, obj, callback){
             }
             else{
                 var found = false;
-                for(entry in fieldStringSplitMap){
-                    for(key in fieldStringSplitMap[entry]){ // there will only be one
+                for(var entry in fieldStringSplitMap){
+                    for(var key in fieldStringSplitMap[entry]){ // there will only be one
                         parts = data.split(key);
                         if(parts.length > 1){
                             found = true;
@@ -116,6 +116,16 @@ function openSerialPort(portName, obj, callback){
 
 router.get('/:serialNumber', function(req, res, next) {
     res.json(dataRecordBySerialNumber[req.param("serialNumber")]);
+});
+
+router.post('/commit/:serialNumber', function(req, res, next) {
+    for(var entry in allPorts){
+        if(allPorts[entry]["serialNumber"] == req.param("serialNumber")){
+            console.log("found it.")
+            console.log(req.body);
+            res.json({"status": "OK"});
+        }
+    }
 });
 
 router.get('/', function(req, res, next) {

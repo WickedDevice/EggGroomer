@@ -8,7 +8,7 @@ var config = require('../../config');
 router.get('/', function(req, res, next) {
 
     // get egg serial number from query string
-    var egg_serial_number = req.param('egg_serial_number');
+    var egg_serial_number = req.param("egg_serial_number")
     if(egg_serial_number.slice(0, 3) == "egg"){
         egg_serial_number = egg_serial_number.slice(3);
     }

@@ -35,8 +35,23 @@ $(function(){
         listPorts();
     });
 
-    $("#commit-form-data-to-serial-port-button").click({
+    $("#commit-form-data-to-serial-port-button").click(function(){
+        $("#feedback").css("background-color", "yellow");
+        $("#feedback").css("color", "black");
+        $("#feedback").text("Committing Serial Data...");
 
+        $.post("/serialports/commit/" + $("#serial_ports option:selected").val(), {
+            "co-sensitivity": $("#form-data-co-sensitivity").text(),
+            "co-offset": $("#form-data-co-offset").text(),
+            "no2-sensitivity": $("#form-data-no2-sensitivity").text(),
+            "no2-offset": $("#form-data-no2-offset").text(),
+            "mqtt-password": $("#form-data-open-sensors-password").text()
+        },
+        function(){
+            $("#feedback").css("background-color", "green");
+            $("#feedback").css("color", "white");
+            $("#feedback").text("Committing Serial Data... Complete");
+        });
     });
 
     $("#connect-to-port-button").click(function(){
