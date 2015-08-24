@@ -164,7 +164,7 @@ function commitValuesToSerialPort(objData, portName, callback){
                     },
                     function(callback){
                         setTimeout(function(){
-                            sp.write("mqtt_pwd " + objData["mqtt-password"].trim() + "\r");
+                            sp.write("mqttpwd " + objData["mqtt-password"].trim() + "\r");
                             callback(null);
                         }, 500);
                     },
