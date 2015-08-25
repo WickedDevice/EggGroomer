@@ -15,7 +15,10 @@ var fields_of_interest_ids_no_prefix = [
     "data-customer-email",
     "data-customer-order-number",
     "data-customer-address",
-    "data-open-sensors-username"
+    "data-open-sensors-username",
+    "data-temperature-offset",
+    "data-humidity-offset"
+
 ];
 
 function highlightRowError(suffix){
@@ -176,6 +179,8 @@ function validatePopulatedData(){
 
 $(function(){
     $("#validate-fields-button").click(function(){
+        clearValidationHighlights();
+
         if(validatePopulatedData()){
             $("#feedback").css("background-color", "green");
             $("#feedback").css("color", "white");

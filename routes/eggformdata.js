@@ -43,7 +43,12 @@ function loadDatabase(callback){
 
                 // go through each row and add it to the database
                 var num_rows = Object.keys(rows).length;
+
                 for(var i = 2; i <= num_rows; i++) {
+
+                    //if(i == 328){
+                    //    console.log(rows[i]);
+                    //}
 
                     var egg_serial_number = rows[i][field_map["SHT25 / Egg Serial Number"]];
                     // if egg_serial_number has a leading appostrophe, remove it.
@@ -63,9 +68,11 @@ function loadDatabase(callback){
                         }
 
                         // add the field data to it, now that it must exist
-                        form_database[egg_serial_number][first_row[field]].push(
-                            stripLeadingTick(rows[i][field])
-                        );
+                        if(first_row[field]) {
+                            form_database[egg_serial_number][first_row[field]].push(
+                                stripLeadingTick(rows[i][field])
+                            );
+                        }
                     }
                 }
 
