@@ -8,9 +8,19 @@ var config = require('../../config');
 var form_database = {};
 var first_time = true;
 
+function stripLeadingTick(str){
+    var ret = str;
+    if(str.length > 0 && str.slice(0,1) == "'"){
+        ret = str.slice(1);
+    }
+
+    return ret
+}
+
 function loadDatabase(callback){
     Spreadsheet.load({
             debug: true,
+            useCellTextValues: false, // false? seriously? yup.
             spreadsheetId: config["google-spreadsheetId"],
             worksheetId: config["google-worksheetId"],
             oauth2: config["google-oauth2"]
@@ -33,20 +43,28 @@ function loadDatabase(callback){
 
                 // go through each row and add it to the database
                 var num_rows = Object.keys(rows).length;
-                for(var i = 2; i <= num_rows; i++){
+                for(var i = 2; i <= num_rows; i++) {
+
                     var egg_serial_number = rows[i][field_map["SHT25 / Egg Serial Number"]];
-                    for(field in rows[i]){
+                    // if egg_serial_number has a leading appostrophe, remove it.
+                    if(!egg_serial_number){
+                        egg_serial_number = "";
+                    }
+
+                    egg_serial_number = stripLeadingTick(egg_serial_number);
+
+                    for(var field in rows[i]){
                         if(!form_database[egg_serial_number]){
                             // need a new entry, seed it with empty arrays
                             form_database[egg_serial_number] = {};
-                            for(ffield in first_row){
+                            for(var ffield in first_row){
                                 form_database[egg_serial_number][first_row[ffield]] = [];
                             }
                         }
 
                         // add the field data to it, now that it must exist
                         form_database[egg_serial_number][first_row[field]].push(
-                            rows[i][field]
+                            stripLeadingTick(rows[i][field])
                         );
                     }
                 }

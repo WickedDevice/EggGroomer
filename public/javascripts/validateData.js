@@ -75,6 +75,13 @@ function validateRowNotEmpty(suffix){
     return ret;
 }
 
+function validateEggSerialNumber(suffix){
+    var form_serial_number = $("#form-"+suffix).text();
+    var serial_serial_number = $("#serial-"+suffix).text();
+
+    // serial_serial_number less the leading 'egg' should match form_serial_number
+}
+
 function validateValuesEqual(suffix){
     if($("#serial-"+suffix).text() != $("#form-"+suffix).text()){
         highlightRowError(suffix);
@@ -136,7 +143,7 @@ function validatePopulatedData(){
     if(!validateSensitivity("data-no2-sensitivity")){ ret = false; }
     if(!validateOffset("data-co-offset")){ ret = false; }
     if(!validateOffset("data-no2-offset")){ ret = false; }
-    if(!validateValuesEqual("data-open-sensors-username")){ ret = false; }
+    if(!validateValuesEggSerialNumber("data-open-sensors-username")){ ret = false; }
     if(!validateRowNotEmpty("data-open-sensors-username")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-date-shipped")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-customer-name")){ ret = false; }
