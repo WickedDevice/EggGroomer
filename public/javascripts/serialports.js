@@ -79,6 +79,8 @@ $(function(){
                 {"CO Sensor Zero Value": "#serial-data-co-offset"},
                 {"NO2 Sensitivity": "#serial-data-no2-sensitivity"},
                 {"NO2 Sensor Zero Value": "#serial-data-no2-offset"},
+                {"Temperature Offset": "#serial-data-temperature-offset"},
+                {"Humidity Offset": "#serial-data-humidity-offset"},
                 {"OpenSensors Username": "#serial-data-open-sensors-username" }
             ];
 

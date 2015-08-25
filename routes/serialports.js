@@ -38,6 +38,8 @@ function openSerialPort(portName, obj, callback){
         {"    CO Offset [V]: ": ["CO Sensor Zero Value", null]},
         {"    NO2 Sensitivity [nA/ppm]: ": ["NO2 Sensitivity", null]},
         {"    NO2 Offset [V]: ": ["NO2 Sensor Zero Value", null]},
+        {"    Temperature Reporting Offset [degC]: ": ["Temperature Offset", null]},
+        {"    Humidity Reporting Offset [%]: ": ["Humidity Offset", null]},
         {"    MQTT Client ID: ": ["OpenSensors Username", null]}
     ];
 
@@ -334,12 +336,12 @@ router.post('/applycalibrations', function(req, res, next) {
         var lineCount = 0;
         var serialNumber = port.serialNumber;
 
-        if(!body[serialNumber]){ // no data for this port was sent
+        if(!req.body[serialNumber]){ // no data for this port was sent
             callback(null);
         }
         else {
-            var temp_off = body[serialNumber]["temp_off"];
-            var hum_off = body[serialNumber]["hum_off"];
+            var temp_off = req.body[serialNumber]["temp_off"];
+            var hum_off = req.body[serialNumber]["hum_off"];
 
             sp.on("open", function () {
                 console.log('open');
