@@ -23,6 +23,15 @@ function highlightRowError(suffix){
     highlightFormFieldError(suffix);
 }
 
+function stripPrefix(str, prefix){
+    var ret = str;
+    if(str.length >= prefix.length && str.slice(0,prefix.length) == prefix){
+        ret = str.slice(prefix.length);
+    }
+
+    return ret;
+}
+
 function highlightSerialFieldError(suffix){
     $("#serial-"+suffix).css("background-color", "red");
     $("#serial-"+suffix).css("color", "white");
@@ -80,6 +89,9 @@ function validateEggSerialNumber(suffix){
     var serial_serial_number = $("#serial-"+suffix).text();
 
     // serial_serial_number less the leading 'egg' should match form_serial_number
+    if(stripPrefix(form_serial_number, "egg") != stripPrefix(serial_serial_number, "egg")){
+        highlightRowError(suffix);
+    }
 }
 
 function validateValuesEqual(suffix){
@@ -140,9 +152,13 @@ function validatePopulatedData(){
     if(!validateFormFieldNotEmpty("data-no2-serial-number")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-no2-date-code")){ ret = false; }
     if(!validateSensitivity("data-co-sensitivity")){ ret = false; }
+    if(!validateRowNotEmpty("data-co-sensitivity")){ ret = false; }
     if(!validateSensitivity("data-no2-sensitivity")){ ret = false; }
+    if(!validateRowNotEmpty("data-no2-sensitivity")){ ret = false; }
     if(!validateOffset("data-co-offset")){ ret = false; }
+    if(!validateRowNotEmpty("data-co-offset")){ ret = false; }
     if(!validateOffset("data-no2-offset")){ ret = false; }
+    if(!validateRowNotEmpty("data-no2-offset")){ ret = false; }
     if(!validateEggSerialNumber("data-open-sensors-username")){ ret = false; }
     if(!validateRowNotEmpty("data-open-sensors-username")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-date-shipped")){ ret = false; }
@@ -150,6 +166,10 @@ function validatePopulatedData(){
     if(!validateFormFieldNotEmpty("data-customer-email")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-customer-order-number")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-customer-address")){ ret = false; }
+    if(!validateOffset("data-temperature-offset")){ ret = false; }
+    if(!validateRowNotEmpty("data-temperature-offset")){ ret = false; }
+    if(!validateOffset("data-humidity-offset")){ ret = false; }
+    if(!validateRowNotEmpty("data-humidity-offset")){ ret = false; }
 
     return ret;
 }

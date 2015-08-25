@@ -14,7 +14,7 @@ function stripLeadingTick(str){
         ret = str.slice(1);
     }
 
-    return ret
+    return ret;
 }
 
 function loadDatabase(callback){
