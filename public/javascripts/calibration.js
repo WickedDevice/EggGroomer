@@ -77,8 +77,8 @@ $(function(){
                     var temperature = $("tr#" + serialNumber +  " td.Temperature").text();
                     var humidity = $("tr#" + serialNumber +  " td.Humidity").text();
                     objs[serialNumber] = {};
-                    objs[serialNumber]["temp_off"] = temperature - parseFloat($("input#actual-temperature").val());
-                    objs[serialNumber]["hum_off"] = humidity - parseFloat($("input#actual-humidity").val());
+                    objs[serialNumber].temp_off = temperature - parseFloat($("input#actual-temperature").val());
+                    objs[serialNumber].hum_off = humidity - parseFloat($("input#actual-humidity").val());
                 }
             });
 
@@ -87,7 +87,7 @@ $(function(){
             $("#feedback").text("Applying Calibrations...");
 
             $.post("/serialports/applycalibrations",
-                objs,
+                JSON.stringify(objs),
                 function(){
                     $("#feedback").css("background-color", "green");
                     $("#feedback").css("color", "white");

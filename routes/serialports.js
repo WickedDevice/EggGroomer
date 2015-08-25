@@ -327,6 +327,14 @@ router.get("/currentcalibrationdata", function(req, res, next){
 });
 
 router.post('/applycalibrations', function(req, res, next) {
+    // I have no idea why i have to jump through hoops here
+    var obj = req.body;
+    for(var key in obj){
+        obj = JSON.parse(key);
+        break;
+    }
+
+    console.log(obj);
     async.forEach(allPorts, function(port, callback) {
         var sp = new SerialPort(port.comName, {
             baudrate: 115200,
@@ -336,12 +344,12 @@ router.post('/applycalibrations', function(req, res, next) {
         var lineCount = 0;
         var serialNumber = port.serialNumber;
 
-        if(!req.body[serialNumber]){ // no data for this port was sent
+        if(!obj[serialNumber]){ // no data for this port was sent
             callback(null);
         }
         else {
-            var temp_off = req.body[serialNumber]["temp_off"];
-            var hum_off = req.body[serialNumber]["hum_off"];
+            var temp_off = obj[serialNumber]["temp_off"];
+            var hum_off = obj[serialNumber]["hum_off"];
 
             sp.on("open", function () {
                 console.log('open');
