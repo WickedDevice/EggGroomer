@@ -5,11 +5,63 @@ var async = require('async');
 var Spreadsheet = require('edit-google-spreadsheet');
 var config = require('../../config');
 
+var form_database = {};
+var first_time = true;
+
+function loadDatabase(callback){
+    Spreadsheet.load({
+            debug: true,
+            spreadsheetId: config["google-spreadsheetId"],
+            worksheetId: config["google-worksheetId"],
+            oauth2: config["google-oauth2"]
+        },
+        function sheetReady(err, spreadsheet) {
+            if(err) throw err;
+
+            spreadsheet.receive(function(err, rows, info) {
+                if(err) throw err;
+
+                //console.log("Found rows:", rows);
+                var first_row = rows[1];
+                var num_fields = Object.keys(first_row).length
+
+                // create the inverse lookup mapping
+                var field_map = {};
+                for(field in first_row){
+                    field_map[first_row[field]] = field;
+                }
+
+                // go through each row and add it to the database
+                var num_rows = Object.keys(rows).length;
+                for(var i = 2; i <= num_rows; i++){
+                    var egg_serial_number = rows[i][field_map["SHT25 / Egg Serial Number"]];
+                    for(field in rows[i]){
+                        if(!form_database[egg_serial_number]){
+                            // need a new entry, seed it with empty arrays
+                            form_database[egg_serial_number] = {};
+                            for(ffield in first_row){
+                                form_database[egg_serial_number][first_row[ffield]] = [];
+                            }
+                        }
+
+                        // add the field data to it, now that it must exist
+                        form_database[egg_serial_number][first_row[field]].push(
+                            rows[i][field]
+                        );
+                    }
+                }
+
+                callback(null);
+            });
+        }
+    );
+}
+
 router.get('/', function(req, res, next) {
 
     // get egg serial number from query string
     var egg_serial_number = req.param("egg_serial_number")
-    if(egg_serial_number.slice(0, 3) == "egg"){
+    if(egg_serial_number && egg_serial_number.slice(0, 3) == "egg"){
         egg_serial_number = egg_serial_number.slice(3);
     }
 
@@ -18,43 +70,22 @@ router.get('/', function(req, res, next) {
     waterfall(
         [
             function(callback){
-                Spreadsheet.load({
-                        debug: true,
-                        spreadsheetId: config["google-spreadsheetId"],
-                        worksheetId: config["google-worksheetId"],
-                        oauth2: config["google-oauth2"]
-                    },
-                    function sheetReady(err, spreadsheet) {
-                        if(err) throw err;
-
-                        spreadsheet.receive(function(err, rows, info) {
-                            if(err) throw err;
-
-                            //console.log("Found rows:", rows);
-                            var first_row = rows[1];
-                            var num_fields = Object.keys(first_row).length
-
-                            var field_map = {};
-                            for(field in first_row){
-                                field_map[first_row[field]] = field;
-                                egg_obj[first_row[field]] = []; // an array of length 1 eventually is the hope
-                            }
-
-                            var num_rows = Object.keys(rows).length;
-                            for(var i = 2; i <= num_rows; i++){
-                                if(rows[i][field_map["SHT25 / Egg Serial Number"]] == egg_serial_number){
-                                    for(field in rows[i]){
-                                        egg_obj[first_row[field]].push(
-                                            rows[i][field]
-                                        );
-                                    }
-                                }
-                            }
-
-                            callback(null);
-                        });
+                if(first_time) {
+                    loadDatabase(callback);
+                    first_time = false;
+                }
+                else{
+                    callback(null);
+                }
+            },
+            function(callback){
+                if(egg_serial_number){
+                    if(form_database[egg_serial_number]){
+                        // no need to deep copy it, since we're read only here
+                        egg_obj = form_database[egg_serial_number];
                     }
-                );
+                }
+                callback(null);
             }
         ],
         function(err, result){

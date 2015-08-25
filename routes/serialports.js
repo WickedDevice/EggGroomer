@@ -31,7 +31,8 @@ function openSerialPort(portName, obj, callback){
         {"    CO Sensitivity [nA/ppm]: ": ["CO Sensitivity", null]},
         {"    CO Offset [V]: ": ["CO Sensor Zero Value", null]},
         {"    NO2 Sensitivity [nA/ppm]: ": ["NO2 Sensitivity", null]},
-        {"    NO2 Offset [V]: ": ["NO2 Sensor Zero Value", null]}
+        {"    NO2 Offset [V]: ": ["NO2 Sensor Zero Value", null]},
+        {"    MQTT Client ID: ": ["OpenSensors Username", null]}
     ];
 
     var sp = new SerialPort(portName, {
@@ -48,7 +49,7 @@ function openSerialPort(portName, obj, callback){
         sp.on('data', function(data) {
             console.log('line ' + lineCount + ': ' + data);
             lineCount++;
-            if(lineCount == 20){
+            if(lineCount == 21){
                 sp.write("aqe\r");
             }
 
@@ -130,10 +131,11 @@ function commitValuesToSerialPort(objData, portName, callback){
         sp.on('data', function (data) {
             console.log('line ' + lineCount + ': ' + data);
             lineCount++;
-            if (lineCount == 20) {
+            if (lineCount == 21) {
                 waterfall([
                     function(callback){
                         setTimeout(function(){
+                            console.log("wrote aqe");
                             sp.write("aqe\r");
                             callback(null);
                         }, 500);
@@ -141,42 +143,49 @@ function commitValuesToSerialPort(objData, portName, callback){
                     function(callback){
                         setTimeout(function(){
                             sp.write("no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])) + "\r");
+                            console.log("wrote no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])));
                             callback(null);
                         }, 500);
                     },
                     function(callback){
                         setTimeout(function(){
                             sp.write("no2_off " + objData["no2-offset"].trim() + "\r");
+                            console.log("wrote no2_off " + objData["no2-offset"].trim());
                             callback(null);
                         }, 500);
                     },
                     function(callback){
                         setTimeout(function(){
                             sp.write("co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])) + "\r");
+                            console.log("wrote co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])));
                             callback(null);
                         }, 500);
                     },
                     function(callback){
                         setTimeout(function(){
                             sp.write("co_off " + objData["co-offset"].trim() + "\r");
+                            console.log("wrote co_off " + objData["co-offset"].trim());
                             callback(null);
                         }, 500);
                     },
                     function(callback){
                         setTimeout(function(){
                             sp.write("mqttpwd " + objData["mqtt-password"].trim() + "\r");
+                            console.log("wrote mqttpwd " + objData["mqtt-password"].trim());
                             callback(null);
                         }, 500);
                     },
                     function(callback){
                         setTimeout(function(){
                             sp.write("backup all\r");
+                            console.log("wrote backup all");
                             callback(null);
                         }, 500);
                     },
                     function(callback){
                         setTimeout(function(){
                             sp.write("restore defaults\r");
+                            console.log("wrote restore defaults");
                             callback(null);
                         }, 500);
                     }
@@ -189,6 +198,7 @@ function commitValuesToSerialPort(objData, portName, callback){
             if(lineCount == 100){
                 setTimeout(function(){
                     sp.close();
+                    console.log("serial port closed.");
                     callback(null);
                 }, 5000);
             }

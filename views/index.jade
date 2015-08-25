@@ -6,16 +6,18 @@ block content
     #serial-number-div
         label Serial Number:
         input#egg_serial_number
+        span.info * only manually populate to form record from the database
 
     #serial-port-div
         label Serial Port:
         select#serial_ports
             option(value="0") Choose...
         input#connect-to-port-button.btn.btn-default(type="button", value="Connect to Port")
-        input#list-ports-button.btn.btn-default(type="button", value="List Ports")
+        input#list-ports-button.btn.btn-default(type="button", value="Refresh Serial Data")
 
     #form-data-buttons
         input#get-form-data-button.btn.btn-default(type="button", value="Get Form Data")
+        input#validate-fields-button.btn.btn-default(type="button", value="Validate Data")
         input#commit-form-data-to-serial-port-button.btn.btn-default(type="button", value="Commit Form Data to Serial Port")
 
     table.table-striped(border="2")

@@ -58,6 +58,11 @@ $(function(){
         $("#feedback").css("background-color", "yellow");
         $("#feedback").css("color", "black");
         $("#feedback").text("Getting Serial Data...");
+        clearValidationHighlights();
+
+        $("#egg_serial_number").val($("#serial_ports option:selected").val());
+
+        loadFormDataForEgg($("#egg_serial_number").val());
 
         $.getJSON( '/serialports/' + $("#serial_ports option:selected").val(), function( data ) {
             console.log(data);
@@ -69,7 +74,7 @@ $(function(){
                 {"CO Sensor Zero Value": "#serial-data-co-offset"},
                 {"NO2 Sensitivity": "#serial-data-no2-sensitivity"},
                 {"NO2 Sensor Zero Value": "#serial-data-no2-offset"},
-                {"SHT25 / Egg Serial Number": "#serial-data-open-sensors-username" }
+                {"OpenSensors Username": "#serial-data-open-sensors-username" }
             ];
 
             for(entry in fields_of_interest_view_map){
