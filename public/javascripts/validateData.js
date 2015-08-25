@@ -143,7 +143,7 @@ function validatePopulatedData(){
     if(!validateSensitivity("data-no2-sensitivity")){ ret = false; }
     if(!validateOffset("data-co-offset")){ ret = false; }
     if(!validateOffset("data-no2-offset")){ ret = false; }
-    if(!validateValuesEggSerialNumber("data-open-sensors-username")){ ret = false; }
+    if(!validateEggSerialNumber("data-open-sensors-username")){ ret = false; }
     if(!validateRowNotEmpty("data-open-sensors-username")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-date-shipped")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-customer-name")){ ret = false; }
