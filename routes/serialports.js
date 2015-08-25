@@ -8,6 +8,12 @@ var SerialPort = require("serialport").SerialPort
 var allPorts = [];
 var dataRecordBySerialNumber = [];
 
+var openHandles = [];
+var currentCalibrationValues = {};
+
+function isNumeric(n) {
+    return !isNaN(parseFloat(n)) && isFinite(n);
+}
 
 function stripTrailingBarAndTrim(str){
     return str.substring(0, str.lastIndexOf("|")).trim();
@@ -115,7 +121,7 @@ function openSerialPort(portName, obj, callback){
     });
 }
 
-router.get('/:serialNumber', function(req, res, next) {
+router.get('/data/:serialNumber', function(req, res, next) {
     res.json(dataRecordBySerialNumber[req.param("serialNumber")]);
 });
 
@@ -208,6 +214,122 @@ function commitValuesToSerialPort(objData, portName, callback){
 
 }
 
+router.get('/startcalibration', function(req, res, next) {
+    async.forEach(allPorts, function(port, callback) {
+        var sp = new SerialPort(port.comName, {
+            baudrate: 115200,
+            parser: serialPort.parsers.readline("\n")
+        });
+
+        var lineCount = 0;
+        sp.on("open", function () {
+            console.log('open');
+
+            openHandles.push(sp);
+
+            sp.on('data', function (data) {
+                console.log('line ' + lineCount + ': ' + data);
+                lineCount++;
+                if (lineCount == 21) {
+                    waterfall([
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote aqe");
+                                    sp.write("aqe\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote opmode offline");
+                                    sp.write("opmode offline\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote temp_off 0");
+                                    sp.write("temp_off 0\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote hum_off 0");
+                                    sp.write("hum_off 0\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote backup all");
+                                    sp.write("backup all\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote exit");
+                                    sp.write("exit\r");
+                                    callback(null);
+                                }, 500);
+                            }
+                        ],
+                        function (err) {
+                            console.log("done for now.")
+                            callback(null);
+                        });
+
+                }
+                else {
+                    // if the line starts with "csv:" pull the current values out and store them in a global
+                    if (data.trim().slice(0, 4) == "csv:") {
+                        parts = data.trim().slice(4).split(",");
+                        if(parts.length > 2 && isNumeric(parts[1])){
+                            if(!currentCalibrationValues[port.serialNumber]) {
+                                currentCalibrationValues[port.serialNumber] = {};
+                            }
+                            currentCalibrationValues[port.serialNumber]["Temperature"] = parseFloat(parts[1]);
+                        }
+
+                        if(parts.length > 3 && isNumeric(parts[2])){
+                            if(!currentCalibrationValues[port.serialNumber]) {
+                                currentCalibrationValues[port.serialNumber] = {};
+                            }
+                            currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[1]);
+                        }
+                    }
+                }
+            });
+        });
+    },function(err){
+        res.json(allPorts);
+    });
+});
+
+router.get('/stopcalibration', function(req, res, next) {
+    async.forEach(openHandles, function(sp, callback){
+        sp.close(function(){
+            console.log("close");
+            callback(null);
+        });
+    },
+    function(err) {
+        res.json({status: "OK"});
+    });
+});
+
+// this will get polled periodically to update the front end
+router.get("/currentcalibrationdata", function(req, res, next){
+    res.json(currentCalibrationValues);
+});
+
+router.post('/applycalibration/:serialNumber', function(req, res, next) {
+    //TODO: Implement something here
+});
+
+
+
 router.post('/commit/:serialNumber', function(req, res, next) {
     var found_it = false;
 
@@ -260,8 +382,6 @@ router.get('/', function(req, res, next) {
             res.json(allPorts);
         }
     );
-
-
 });
 
 module.exports = router;

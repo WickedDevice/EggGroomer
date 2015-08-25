@@ -1,4 +1,8 @@
+var attachedEggs = [];
+
 function listPorts(){
+    attachedEggs = [];
+
     $("#feedback").css("background-color", "yellow");
     $("#feedback").css("color", "black");
     $("#feedback").text("Listing Serial Ports...");
@@ -10,6 +14,7 @@ function listPorts(){
         for(var i = 0; i < data.length; i++){
             var obj = data[i];
             $('#serial_ports').append('<option value="' + obj.serialNumber + '">' + obj.serialNumber + '</option>');
+            attachedEggs.push(JSON.parse(JSON.stringify(obj)));
         }
 
         $("#feedback").css("background-color", "green");
@@ -64,7 +69,7 @@ $(function(){
 
         loadFormDataForEgg($("#egg_serial_number").val());
 
-        $.getJSON( '/serialports/' + $("#serial_ports option:selected").val(), function( data ) {
+        $.getJSON( '/serialports/data/' + $("#serial_ports option:selected").val(), function( data ) {
             console.log(data);
             var fields_of_interest_view_map = [
                 {"CC3000 MAC address": "#serial-data-mac-address"},

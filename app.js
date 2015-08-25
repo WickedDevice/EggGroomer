@@ -9,7 +9,7 @@ var routes = require('./routes/index');
 var users = require('./routes/users');
 var serialports = require('./routes/serialports');
 var eggformdata = require('./routes/eggformdata');
-
+var calibration = require('./routes/calibration');
 var app = express();
 
 // view engine setup
@@ -26,8 +26,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 app.use('/users', users);
-app.use('/serialports', serialports)
-app.use('/eggformdata', eggformdata)
+app.use('/serialports', serialports);
+app.use('/eggformdata', eggformdata);
+app.use('/calibration', calibration);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
