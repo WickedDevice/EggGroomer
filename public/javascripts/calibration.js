@@ -70,10 +70,10 @@ $(function(){
         if(!calibration_in_progress && calibration_started_at_some_point){
             // compose the object we are going to send
             var objs = {};
-            $("table#calTable tr").each(function(item){
+            $("table#calTable tr").each(function(index){
                 var obj = {};
-                if(item.attr('id').slice(0, 3) == "egg"){
-                    var serialNumber = item.attr('id');
+                if($(this).attr('id').slice(0, 3) == "egg"){
+                    var serialNumber = $(this).attr('id');
                     var temperature = $("tr#" + serialNumber +  " td.Temperature").text();
                     var humidity = $("tr#" + serialNumber +  " td.Humidity").text();
                     objs[serialNumber] = {};
