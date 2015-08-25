@@ -8,10 +8,14 @@ var config = require('../../config');
 var form_database = {};
 var first_time = true;
 
-function stripLeadingTick(str){
+function stripLeadingTickAndEgg(str){
     var ret = str;
-    if(str.length > 0 && str.slice(0,1) == "'"){
+    if(ret.length >= 1 && ret.slice(0,1) == "'"){
         ret = str.slice(1);
+    }
+
+    if(ret.length >= 3 && ret.slice(0,3) == "egg"){
+        ret = str.slice(3);
     }
 
     return ret;
@@ -56,7 +60,7 @@ function loadDatabase(callback){
                         egg_serial_number = "";
                     }
 
-                    egg_serial_number = stripLeadingTick(egg_serial_number);
+                    egg_serial_number = stripLeadingTickAndEgg(egg_serial_number);
 
                     for(var field in rows[i]){
                         if(!form_database[egg_serial_number]){
@@ -70,7 +74,7 @@ function loadDatabase(callback){
                         // add the field data to it, now that it must exist
                         if(first_row[field]) {
                             form_database[egg_serial_number][first_row[field]].push(
-                                stripLeadingTick(rows[i][field])
+                                stripLeadingTickAndEgg(rows[i][field])
                             );
                         }
                     }
