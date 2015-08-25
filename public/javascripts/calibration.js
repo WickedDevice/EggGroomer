@@ -68,7 +68,32 @@ $(function(){
 
     $("#apply-calibration-button").click(function(){
         if(!calibration_in_progress && calibration_started_at_some_point){
+            // compose the object we are going to send
+            var objs = {};
+            $("table#calTable tr").each(function(item){
+                var obj = {};
+                if(item.attr('id').slice(0, 3) == "egg"){
+                    var serialNumber = item.attr('id');
+                    var temperature = $("tr#" + serialNumber +  " td.Temperature").text();
+                    var humidity = $("tr#" + serialNumber +  " td.Humidity").text();
+                    objs[serialNumber] = {};
+                    objs[serialNumber]["temp_off"] = temperature - parseFloat($("input#actual-temperature").val());
+                    objs[serialNumber]["hum_off"] = humidity - parseFloat($("input#actual-humidity").val());
+                }
+            });
 
+            $("#feedback").css("background-color", "yellow");
+            $("#feedback").css("color", "black");
+            $("#feedback").text("Applying Calibrations...");
+
+            $.post("/serialports/applycalibrations",
+                objs,
+                function(){
+                    $("#feedback").css("background-color", "green");
+                    $("#feedback").css("color", "white");
+                    $("#feedback").text("Applying Calibrations... Complete");
+                }
+            );
         }
     });
 });

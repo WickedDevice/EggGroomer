@@ -296,7 +296,7 @@ router.get('/startcalibration', function(req, res, next) {
                             if(!currentCalibrationValues[port.serialNumber]) {
                                 currentCalibrationValues[port.serialNumber] = {};
                             }
-                            currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[1]);
+                            currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[2]);
                         }
                     }
                 }
@@ -324,8 +324,85 @@ router.get("/currentcalibrationdata", function(req, res, next){
     res.json(currentCalibrationValues);
 });
 
-router.post('/applycalibration/:serialNumber', function(req, res, next) {
-    //TODO: Implement something here
+router.post('/applycalibrations', function(req, res, next) {
+    async.forEach(allPorts, function(port, callback) {
+        var sp = new SerialPort(port.comName, {
+            baudrate: 115200,
+            parser: serialPort.parsers.readline("\n")
+        });
+
+        var lineCount = 0;
+        var serialNumber = port.serialNumber;
+
+        if(!body[serialNumber]){ // no data for this port was sent
+            callback(null);
+        }
+        else {
+            var temp_off = body[serialNumber]["temp_off"];
+            var hum_off = body[serialNumber]["hum_off"];
+
+            sp.on("open", function () {
+                console.log('open');
+                sp.on('data', function (data) {
+                    console.log('line ' + lineCount + ': ' + data);
+                    lineCount++;
+                    if (lineCount == 21) {
+                        waterfall([
+                                function (callback) {
+                                    setTimeout(function () {
+                                        console.log("wrote aqe");
+                                        sp.write("aqe\r");
+                                        callback(null);
+                                    }, 500);
+                                },
+                                function (callback) {
+                                    setTimeout(function () {
+                                        console.log("wrote temp_off " + temp_off);
+                                        sp.write("temp_off " + temp_off + "\r");
+                                        callback(null);
+                                    }, 500);
+                                },
+                                function (callback) {
+                                    setTimeout(function () {
+                                        console.log("wrote hum_off " + hum_off + "");
+                                        sp.write("hum_off " + hum_off + "\r");
+                                        callback(null);
+                                    }, 500);
+                                },
+                                function (callback) {
+                                    setTimeout(function () {
+                                        console.log("wrote backup all");
+                                        sp.write("backup all\r");
+                                        callback(null);
+                                    }, 500);
+                                },
+                                function (callback) {
+                                    setTimeout(function () {
+                                        console.log("wrote restore defaults");
+                                        sp.write("restore defaults\r");
+                                        callback(null);
+                                    }, 500);
+                                }
+                            ],
+                            function (err) {
+
+                            });
+                    }
+
+                    if (lineCount == 100) {
+                        setTimeout(function () {
+                            sp.close();
+                            console.log("serial port closed.");
+                            callback(null);
+                        }, 5000);
+                    }
+                });
+            });
+        }
+    },function(err){
+        res.json(allPorts);
+    });
+
 });
 
 
