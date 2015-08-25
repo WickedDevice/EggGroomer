@@ -7,7 +7,7 @@ function doPoll(){
     $.get('/serialports/currentcalibrationdata', function(data) {
         for(var key in data){ // keys are Serial Numbers here
             // if the table doesn't already have a row for this key, create one
-            if(!$("tr#" + key)){
+            if($("tr#" + key).length == 0){
                 $('#calTable tr:last').after(
                   '<tr id="' + key + '"><td>' + key + '</td><td class="Temperature"></td><td class="Humidity"></td>'
                 );
@@ -15,7 +15,7 @@ function doPoll(){
             values = data[key];
             for(var value_type in values){ // value_type is Temperature or Humidity
                 value = values[value_type]; // this is a number
-                $("#" + key + "." + value_type).text(value);
+                $("#" + key + " td." + value_type).text(value);
             }
         }
 
