@@ -72,7 +72,7 @@ $(function(){
             var objs = {};
             $("table#calTable tr").each(function(index){
                 var obj = {};
-                if($(this).attr('id').slice(0, 3) == "egg"){
+                if($(this).attr('id') && $(this).attr('id').slice(0, 3) == "egg"){
                     var serialNumber = $(this).attr('id');
                     var temperature = $("tr#" + serialNumber +  " td.Temperature").text();
                     var humidity = $("tr#" + serialNumber +  " td.Humidity").text();
