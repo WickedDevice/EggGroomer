@@ -22,7 +22,9 @@ function loadFormDataForEgg(serialNumber){
             {"Customer Email": "#form-data-customer-email"},
             {"Customer Order Number": "#form-data-customer-order-number"},
             {"Customer Address": "#form-data-customer-address"},
-            {"SHT25 / Egg Serial Number": "#form-data-open-sensors-username" }
+            {"SHT25 / Egg Serial Number": "#form-data-open-sensors-username" },
+            {"Temperature Offset": "#form-data-temperature-offset" },
+            {"Humidity Offset": "#form-data-humidity-offset" }
         ];
 
         for(entry in fields_of_interest_view_map){
