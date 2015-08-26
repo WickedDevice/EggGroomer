@@ -233,6 +233,7 @@ router.get('/startcalibration', function(req, res, next) {
                 console.log('line ' + lineCount + ': ' + data);
                 lineCount++;
                 if (lineCount == 21) {
+                    //insert small change for git's benfit here.
                     cmdArray =  ["aqe\r","opmode offline\r","temp_off 0\r","hum_off 0\r","backup all\r","exit\r"]
                     sendToSerialport.send(sp, cmdArray);
                 }
