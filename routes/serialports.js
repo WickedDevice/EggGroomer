@@ -70,6 +70,7 @@ function openSerialPort(portName, obj, callback){
                 }
                 dataRecordBySerialNumber[serialNumber] = {};
                 dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
+                dataRecordBySerialNumber[serialNumber]["comName"] = portName;
             }
 
             parts = data.split("   Firmware Version ");

@@ -64,7 +64,8 @@ $(function(){
         $("#feedback").css("color", "black");
         $("#feedback").text("Getting Serial Data...");
         clearValidationHighlights();
-
+        $("#comName").text("");
+        
         $("#egg_serial_number").val($("#serial_ports option:selected").val());
 
         loadFormDataForEgg($("#egg_serial_number").val());
@@ -83,6 +84,8 @@ $(function(){
                 {"Humidity Offset": "#serial-data-humidity-offset"},
                 {"OpenSensors Username": "#serial-data-open-sensors-username" }
             ];
+
+            $("#comName").text( data["comName"]);
 
             for(entry in fields_of_interest_view_map){
                 var field_map = fields_of_interest_view_map[entry];
