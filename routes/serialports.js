@@ -4,7 +4,6 @@ var waterfall = require('async-waterfall');
 var async = require('async');
 var serialPort = require("serialport");
 var SerialPort = require("serialport").SerialPort
-var sendToSerialport = require("sendToSerialport");
 
 var allPorts = [];
 var dataRecordBySerialNumber = [];
@@ -224,18 +223,66 @@ router.get('/startcalibration', function(req, res, next) {
             baudrate: 115200,
             parser: serialPort.parsers.readline("\n")
         });
+
         var lineCount = 0;
         sp.on("open", function () {
             console.log('open');
+
             openHandles.push(sp);
 
             sp.on('data', function (data) {
                 console.log('line ' + lineCount + ': ' + data);
                 lineCount++;
                 if (lineCount == 21) {
-                    //insert small change for git's benfit here.
-                    cmdArray =  ["aqe\r","opmode offline\r","temp_off 0\r","hum_off 0\r","backup all\r","exit\r"]
-                    sendToSerialport.send(sp, cmdArray);
+                    waterfall([
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote aqe");
+                                    sp.write("aqe\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote opmode offline");
+                                    sp.write("opmode offline\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote temp_off 0");
+                                    sp.write("temp_off 0\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote hum_off 0");
+                                    sp.write("hum_off 0\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote backup all");
+                                    sp.write("backup all\r");
+                                    callback(null);
+                                }, 500);
+                            },
+                            function (callback) {
+                                setTimeout(function () {
+                                    console.log("wrote exit");
+                                    sp.write("exit\r");
+                                    callback(null);
+                                }, 500);
+                            }
+                        ],
+                        function (err) {
+                            console.log("done for now.")
+                            callback(null);
+                        });
+
                 }
                 else {
                     // if the line starts with "csv:" pull the current values out and store them in a global
