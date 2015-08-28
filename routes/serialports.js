@@ -325,6 +325,8 @@ router.get('/startwificonnect', function(req, res, next) {
                 function(data) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
                     // do stuff with currentNetworkValues, based on content of data
                     // currentNetworkValues[port.serialNumber]["Status"] =  "..."
+                    //TODO: process the data and update status of the Egg
+                    // record the "farthest" it has gotten so far during this test and keep track of if it resets
 
                 },
                 callback // function to call after all commands have been sent, [return from http response here because we aren't going to close the port here]
@@ -350,6 +352,11 @@ router.get('/disconnectAll', function(req, res, next) {
 // this will get polled periodically to update the front end
 router.get("/currentcalibrationdata", function(req, res, next){
     res.json(currentCalibrationValues);
+});
+
+// this will get polled periodically to update the front end
+router.get("/currentwifistatus", function(req, res, next){
+    res.json(currentNetworkValues);
 });
 
 router.post('/applycalibrations', function(req, res, next) {
