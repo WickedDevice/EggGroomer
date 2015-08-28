@@ -6,6 +6,10 @@ function listPorts(){
     $("#feedback").css("background-color", "yellow");
     $("#feedback").css("color", "black");
     $("#feedback").text("Listing Serial Ports...");
+    $("#wait-for-serial-ports").show();
+    $("#wait-for-serial-ports").css("background-color", "yellow");
+    $("#wait-for-serial-ports").css("color", "black");
+
     $.getJSON( '/serialports', function( data ) {
         console.log(JSON.stringify(data));
 
@@ -20,6 +24,7 @@ function listPorts(){
         $("#feedback").css("background-color", "green");
         $("#feedback").css("color", "white");
         $("#feedback").text("Listing Serial Ports... Complete");
+        $("#wait-for-serial-ports").fadeOut(1000);
 
         $("#serial_ports").change(function(){
             $('#egg_serial_number').val($("#serial_ports option:selected").val());

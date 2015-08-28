@@ -2,12 +2,21 @@ function loadFormDataForEgg(serialNumber, reload){
     $("#feedback").css("background-color", "yellow");
     $("#feedback").css("color", "black");
     $("#feedback").text("Getting Form Data...");
+    $("#wait-for-form-data").show();
+    $("#wait-for-form-data").css("background-color", "yellow");
+    $("#wait-for-form-data").css("color", "black");
 
     if(typeof reload === 'undefined'){
         reload = false;
     }
 
+
+    if(serialNumber && serialNumber != "") {
+        serialNumber = 0;
+    }
+
     var url = '/eggformdata?egg_serial_number=' + serialNumber;
+
     if(reload){
         url += "&reload=true";
     }
@@ -54,16 +63,13 @@ function loadFormDataForEgg(serialNumber, reload){
         $("#feedback").css("background-color", "green");
         $("#feedback").css("color", "white");
         $("#feedback").text("Getting Serial Data... Complete");
+        $("#wait-for-form-data").fadeOut(1000);
     });
 }
 
 $(function(){
 
-    $.getJSON( '/eggformdata', function(data){
-        $("#feedback").css("background-color", "green");
-        $("#feedback").css("color", "white");
-        $("#feedback").text("Getting Form Data... Complete");
-    });
+    loadFormDataForEgg();
 
     $('#get-form-data-button').click(function(){
         loadFormDataForEgg($("#egg_serial_number").val(), false);
