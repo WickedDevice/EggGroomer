@@ -125,7 +125,7 @@ function openSerialPort(portName, obj, callback){
 }
 
 router.get('/data/:serialNumber', function(req, res, next) {
-    res.json(dataRecordBySerialNumber[req.query.serialNumber]);
+    res.json(dataRecordBySerialNumber[req.param("serialNumber")]);
 });
 
 function commitValuesToSerialPort(objData, portName, callback){
