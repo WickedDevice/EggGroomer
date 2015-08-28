@@ -365,7 +365,55 @@ router.post('/applycalibrations', function(req, res, next) {
 
 });
 
+router.post('/applynetworksettings', function(req, res, next) {
 
+    //TODO: I have no idea why i have to jump through hoops here in order to parse the posted object
+    var obj = req.body;
+    for(var key in obj){
+        obj = JSON.parse(key);
+        break;
+    }
+
+    console.log(obj);
+
+    async.forEach(allPorts, function(port, callback) {
+        var serialNumber = port.serialNumber;
+
+        if(!serialNumber){ // no data for this port was sent
+            callback(null);
+        }
+        else {
+            var sp = new SerialPort(port.comName, {
+                baudrate: 115200,
+                parser: serialPort.parsers.readline("\n")
+            });
+
+            var ssid = obj["ssid"];
+            var password = obj["password"];
+
+            sendCommandList(
+                sp, // the port to target
+                null, // on serial port open, [null because we are going to the close the port before we're done]
+                21, // number of lines before starting to issue commands
+                [
+                    "aqe",
+                    "restore defaults",
+                    "ssid " + ssid,
+                    "pwd " + password,
+                ], // the list of commands
+                500, // how long to wait between sending each command
+                100, // the number of lines to wait before closing the port
+                5000, // the time to wait after that many lines before closing the port
+                callback, // the function to call after closing the port
+                null, // what to do whenever you get a data line, [null because we are not processing Egg output]
+                null // function to call after all commands have been sent [null because we are going to callback when we close the port]
+            );
+        }
+    },function(err){
+        res.json(allPorts);
+    });
+
+});
 
 router.post('/commit/:serialNumber', function(req, res, next) {
     var found_it = false;
