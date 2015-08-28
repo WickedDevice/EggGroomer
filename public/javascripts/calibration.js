@@ -71,7 +71,7 @@ $(function(){
             $("#feedback").css("color", "black");
             $("#feedback").text("Stopping Calibration...");
 
-            $.getJSON('/serialports/stopcalibration', function( data ) {
+            $.getJSON('/serialports/disconnectAll', function( data ) {
                 $("#feedback").css("background-color", "green");
                 $("#feedback").css("color", "white");
                 $("#feedback").text("Calibration Stopped...");

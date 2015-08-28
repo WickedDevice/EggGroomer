@@ -38,7 +38,7 @@ function listPorts(){
 
 
 $(function(){
-    
+
     if($("#wait-for-serial-ports").length) {
 
         listPorts();
