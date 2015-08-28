@@ -237,20 +237,35 @@ router.get('/startcalibration', function(req, res, next) {
             parser: serialPort.parsers.readline("\n")
         });
 
-        sendCommandList(
-            sp, // the port to target
-            function(sp){  // on serial port open, collect the handles so we can close them later
-                openHandles.push(sp);
-            },
-            21, // number of lines before starting to issue commands
-            [
+        var commands = [];
+
+        if(req.query.zero == "true"){
+            commands = [
                 "aqe",
                 "opmode offline",
                 "temp_off 0",
                 "hum_off 0",
                 "backup all",
                 "exit"
-            ], // the list of commands
+            ];
+        }
+        else{
+            commands = [
+                "aqe",
+                "opmode offline",
+                "exit"
+            ];
+        }
+
+
+
+        sendCommandList(
+            sp, // the port to target
+            function(sp){  // on serial port open, collect the handles so we can close them later
+                openHandles.push(sp);
+            },
+            21, // number of lines before starting to issue commands
+            commands, // the list of commands
             500, // how long to wait between sending each command
             null, // the number of lines to wait before closing the port [null because we aren't going to close the port at all here]
             null, // the time to wait after that many lines before closing the port [null because we aren't going to close the port at all here]

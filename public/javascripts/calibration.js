@@ -29,24 +29,39 @@ function cancelPoll(){
     }
 }
 
-$(function(){
-    $("#start-calibration-button").click(function(){
-        if(!calibration_in_progress){
-            calibration_in_progress = true;
-            calibration_started_at_some_point = true;
-            $("#feedback").css("background-color", "yellow");
-            $("#feedback").css("color", "black");
-            $("#feedback").text("Starting Calibration...");
+function startDataCapture(zeroOffsets){
+    if(!calibration_in_progress){
+        calibration_in_progress = true;
+        calibration_started_at_some_point = true;
+        $("#feedback").css("background-color", "yellow");
+        $("#feedback").css("color", "black");
+        $("#feedback").text("Starting Calibration...");
 
-            $.getJSON('/serialports/startcalibration', function( data ) {
-                $("#feedback").css("background-color", "green");
-                $("#feedback").css("color", "white");
-                $("#feedback").text("Calibration In Progress...");
-
-                // kick off a periodic timer to update the table occationally
-                doPoll();
-            });
+        if(zeroOffsets){
+            zeroOffsets = "true";
         }
+        else{
+            zeroOffsets = "false";
+        }
+
+        $.getJSON('/serialports/startcalibration?zero=' + zeroOffsets, function( data ) {
+            $("#feedback").css("background-color", "green");
+            $("#feedback").css("color", "white");
+            $("#feedback").text("Calibration In Progress...");
+
+            // kick off a periodic timer to update the table occationally
+            doPoll();
+        });
+    }
+}
+
+$(function(){
+    $("#start-acquisition-button").click(function(){
+        startDataCapture(false);
+    });
+
+    $("#start-calibration-button").click(function(){
+        startDataCapture(true);
     });
 
     $("#stop-calibration-button").click(function(){

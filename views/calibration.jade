@@ -1,12 +1,16 @@
 extends layout
 block content
     #feedback
+    #wait-for-serial-ports Please be patient while Serial Ports processing completes...
+
     #calibration-buttons
         #serial-port-div
             label Serial Ports:
             select#serial_ports
                 option(value="0") Please Wait...
             input#list-ports-button.btn.btn-default(type="button", value="Refresh Serial Ports")
+
+        input#start-acquisition-button.btn.btn-default(type="button", value="Start Acquisition Only")
         input#start-calibration-button.btn.btn-default(type="button", value="Start Calibration ")
         input#stop-calibration-button.btn.btn-default(type="button", value="Stop Calibration ")
         input#apply-calibration-button.btn.btn-default(type="button", value="Apply Calibration ")
