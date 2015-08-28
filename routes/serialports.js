@@ -11,6 +11,7 @@ var dataRecordBySerialNumber = [];
 
 var openHandles = [];
 var currentCalibrationValues = {};
+var currentNetworkValues = {};
 
 function isNumeric(n) {
     return !isNaN(parseFloat(n)) && isFinite(n);
@@ -295,6 +296,43 @@ router.get('/startcalibration', function(req, res, next) {
     function(err){
         res.json(allPorts);
     });
+});
+
+router.get('/startwificonnect', function(req, res, next) {
+    async.forEach(allPorts, function(port, callback) {
+            var sp = new SerialPort(port.comName, {
+                baudrate: 115200,
+                parser: serialPort.parsers.readline("\n")
+            });
+
+            var commands = [
+                "aqe",
+                "opmode normal",
+                "exit"
+            ];
+
+            sendCommandList(
+                sp, // the port to target
+                function(sp){  // on serial port open, collect the handles so we can close them later
+                    openHandles.push(sp);
+                },
+                21, // number of lines before starting to issue commands
+                commands, // the list of commands
+                500, // how long to wait between sending each command
+                null, // the number of lines to wait before closing the port [null because we aren't going to close the port at all here]
+                null, // the time to wait after that many lines before closing the port [null because we aren't going to close the port at all here]
+                null, // the function to call after closing the port [null because we aren't going to close the port at all here]
+                function(data) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
+                    // do stuff with currentNetworkValues, based on content of data
+                    // currentNetworkValues[port.serialNumber]["Status"] =  "..."
+
+                },
+                callback // function to call after all commands have been sent, [return from http response here because we aren't going to close the port here]
+            );
+        },
+        function(err){
+            res.json(allPorts);
+        });
 });
 
 router.get('/disconnectAll', function(req, res, next) {
