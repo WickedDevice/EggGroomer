@@ -1,9 +1,18 @@
-function loadFormDataForEgg(serialNumber){
+function loadFormDataForEgg(serialNumber, reload){
     $("#feedback").css("background-color", "yellow");
     $("#feedback").css("color", "black");
     $("#feedback").text("Getting Form Data...");
 
-    $.getJSON( '/eggformdata?egg_serial_number=' + serialNumber, function( data ) {
+    if(typeof reload === 'undefined'){
+        reload = false;
+    }
+
+    var url = '/eggformdata?egg_serial_number=' + serialNumber;
+    if(reload){
+        url += "&reload=true";
+    }
+
+    $.getJSON( url, function( data ) {
         console.log(data);
         var fields_of_interest_view_map = [
             {"CC3000 MAC address": "#form-data-mac-address"},
@@ -56,7 +65,11 @@ $(function(){
         $("#feedback").text("Getting Form Data... Complete");
     });
 
-    $('#get-form-data-button').click(function() {
-        loadFormDataForEgg($("#egg_serial_number").val());
+    $('#get-form-data-button').click(function(){
+        loadFormDataForEgg($("#egg_serial_number").val(), false);
+    });
+
+    $('#refresh-form-data-button').click(function(){
+        loadFormDataForEgg($("#egg_serial_number").val(), true); // reload and load data
     });
 });

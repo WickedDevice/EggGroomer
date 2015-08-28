@@ -5,6 +5,7 @@ var async = require('async');
 var serialPort = require("serialport");
 var SerialPort = require("serialport").SerialPort
 
+var guardListPorts = false;
 var allPorts = [];
 var dataRecordBySerialNumber = [];
 
@@ -162,7 +163,26 @@ function openSerialPort(portName, obj, callback){
                                  }
                              }
 
-                             dataRecordBySerialNumber[serialNumber][fieldStringSplitMap[entry][key][0]] = [arg];
+                             // this whole guard is to stop the application from crashing
+                             // because of hitting refresh while the page is still loading
+                             // and server processing is still ongoing, causing global variable mayhem
+                             if( serialNumber
+                                 && entry
+                                 && key
+                                 && dataRecordBySerialNumber
+                                 && dataRecordBySerialNumber[serialNumber]
+                                 && fieldStringSplitMap
+                                 && fieldStringSplitMap[entry]
+                                 && fieldStringSplitMap[entry][key]
+                                 && fieldStringSplitMap[entry][key][0])
+                             {
+                                 dataRecordBySerialNumber[serialNumber][fieldStringSplitMap[entry][key][0]] = [arg];
+
+                             }
+                             else{
+                                 // well that wasn't good...
+                                 //throw new Error("Please restart the app and be more patient while it initializes.");
+                             }
                              break;
                          }
                      }
@@ -358,6 +378,12 @@ router.post('/commit/:serialNumber', function(req, res, next) {
 });
 
 router.get('/', function(req, res, next) {
+    if(guardListPorts){
+        res.json({"status": "error", "code":"503", "message": "wait, we're busy right now."});
+        return;
+    }
+
+    guardListPorts = true;
     allPorts = [];
     dataRecordBySerialNumber = [];
 
@@ -382,6 +408,7 @@ router.get('/', function(req, res, next) {
         ],
         function(err, result){
             res.json(allPorts);
+            guardListPorts = false;
         }
     );
 });

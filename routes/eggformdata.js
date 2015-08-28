@@ -5,6 +5,8 @@ var async = require('async');
 var Spreadsheet = require('edit-google-spreadsheet');
 var config = require('../../config');
 
+var guardLoadFormDatabase = false;
+
 var form_database = {};
 var first_time = true;
 
@@ -22,6 +24,7 @@ function stripLeadingTickAndEgg(str){
 }
 
 function loadDatabase(callback){
+    form_database = {};
     Spreadsheet.load({
             debug: true,
             useCellTextValues: false, // false? seriously? yup.
@@ -94,6 +97,20 @@ router.get('/', function(req, res, next) {
         egg_serial_number = egg_serial_number.slice(3);
     }
 
+    var reload = req.query.reload;
+    if(reload == "true"){
+        first_time = true;
+    }
+
+    if(guardLoadFormDatabase ){
+        res.json({"status": "error", "code":"503", "message": "wait, we're busy right now."});
+        return;
+    }
+
+    if(first_time){
+        guardLoadFormDatabase = true;
+    }
+
     var egg_obj = {};
 
     waterfall(
@@ -120,6 +137,7 @@ router.get('/', function(req, res, next) {
         function(err, result){
             console.log(egg_obj);
             res.json(egg_obj);
+            guardLoadFormDatabase = false;
         }
     );
 

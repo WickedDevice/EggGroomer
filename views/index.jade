@@ -14,13 +14,14 @@ block content
             option(value="0") Please Wait...
         input#connect-to-port-button.btn.btn-default(type="button", value="Connect to Port")
         input#list-ports-button.btn.btn-default(type="button", value="Refresh Serial Data")
+        input#refresh-form-data-button.btn.btn-default(type="button", value="Re-Download Form Data")
         br
         span#comName
 
     #form-data-buttons
-        input#get-form-data-button.btn.btn-default(type="button", value="Get Form Data")
+        input#get-form-data-button.btn.btn-default(type="button", value="Get Local Form Data")
         input#validate-fields-button.btn.btn-default(type="button", value="Validate Data")
-        input#commit-form-data-to-serial-port-button.btn.btn-default(type="button", value="Commit Form Data to Serial Port")
+        input#commit-form-data-to-serial-port-button.btn.btn-default(type="button", value="Commit Local Form Data to Serial Port")
 
     table.table-striped(border="2")
         tr
