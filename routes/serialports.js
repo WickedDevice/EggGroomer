@@ -28,6 +28,65 @@ function backedUpOrNot(str){
     }
 }
 
+// sp is the serial port to target
+// numLinesToWaitForBeforeClosing can be null to not close the port
+// subsequentProcessingFunction can be null if there's nothing to do on each line received
+// functionToCallAfterAllCommandsSent can be null if there's nothing to do right after sending all the commands
+function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially, commandList, timeBetweenCommands,
+                         numLinesToWaitForBeforeClosing, timeToWaitBeforeClosing, functionToCallAfterClosing,
+                         subsequentProcessingFunction, functionToCallAfterAllCommandsSent){
+
+    var commandFuncs = [];
+    commandList.forEach( function(cmd){
+        commandFuncs.push( function(callback){
+                setTimeout(function(){
+                    sp.write(cmd + "\r");
+                    callback(null);
+                }, timeBetweenCommands);
+            }
+        );
+    });
+
+    var lineCount = 0;
+
+    sp.on("open", function () {
+        console.log('open');
+
+        if(functionToCallOnSpOpen !== null){
+            functionToCallOnSpOpen(sp);
+        }
+
+        sp.on('data', function (data) {
+            console.log('line ' + lineCount + ': ' + data);
+            lineCount++;
+            if (lineCount == numLinesToWaitForInitially) {
+                waterfall(
+                    commandFuncs,
+                    function(err){
+                        if(functionToCallAfterAllCommandsSent !== null){
+                            functionToCallAfterAllCommandsSent(err);
+                        }
+                    });
+            }
+
+            if(lineCount !== null && lineCount == numLinesToWaitForBeforeClosing){
+                setTimeout(function(){
+                    sp.close();
+                    console.log("serial port closed.");
+                    if(functionToCallAfterClosing !== null){
+                        functionToCallAfterClosing(null);
+                    }
+                }, timeToWaitBeforeClosing);
+            }
+
+            if(subsequentProcessingFunction !== null){
+                subsequentProcessingFunction(data);
+            }
+
+        });
+    });
+}
+
 function openSerialPort(portName, obj, callback){
 
     var fieldStringSplitMap = [
@@ -52,76 +111,70 @@ function openSerialPort(portName, obj, callback){
     var serialNumber = null;
     var firmwareVersion = null;
 
-    sp.on("open", function () {
-        console.log('open');
-        sp.on('data', function(data) {
-            console.log('line ' + lineCount + ': ' + data);
-            lineCount++;
-            if(lineCount == 21){
-                sp.write("aqe\r");
-            }
+    sendCommandList(
+         sp, // the port to target
+         null, // on serial port open [null because we don't need to hang on to the handles]
+         21, // number of lines before starting to issue commands
+         ["aqe"], // the list of commands
+         0, // how long to wait between sending each command
+         80, // the number of lines to wait before closing the port
+         0, // the time to wait after that many lines before closing the port
+         callback, // the function to call after closing the port  [return from http request after closing the port]
+         function(data){ // what to do whenever you get a data line [collect the table data into global object]
+             var parts = data.trim().split("Egg Serial Number: ");
+             if(parts.length == 2){
+                 serialNumber = parts[1];
+                 if(obj) {
+                     obj.serialNumber = serialNumber;
+                     allPorts.push(obj);
+                 }
+                 dataRecordBySerialNumber[serialNumber] = {};
+                 dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
+                 dataRecordBySerialNumber[serialNumber]["comName"] = portName;
+             }
 
-            var parts = data.trim().split("Egg Serial Number: ");
-            if(parts.length == 2){
-                serialNumber = parts[1];
-                if(obj) {
-                    obj.serialNumber = serialNumber;
-                    allPorts.push(obj);
-                }
-                dataRecordBySerialNumber[serialNumber] = {};
-                dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
-                dataRecordBySerialNumber[serialNumber]["comName"] = portName;
-            }
+             parts = data.split("   Firmware Version ");
+             if(parts.length > 1){
+                 firmwareVersion = stripTrailingBarAndTrim(parts[1]);
+             }
+             else{
+                 var found = false;
+                 for(var entry in fieldStringSplitMap){
+                     for(var key in fieldStringSplitMap[entry]){ // there will only be one
+                         parts = data.split(key);
+                         if(parts.length > 1){
+                             found = true;
+                             var arg = null;
+                             if(parts[0].length > 0){
+                                 if(fieldStringSplitMap[entry][key][1] == null){
+                                     arg = parts[0].trim();
+                                 }
+                                 else{
+                                     arg = fieldStringSplitMap[entry][key][1](parts[0])
+                                 }
+                             }
+                             else{
+                                 if(fieldStringSplitMap[entry][key][1] == null){
+                                     arg = parts[1].trim();
+                                 }
+                                 else{
+                                     arg = fieldStringSplitMap[entry][key][1](parts[1])
+                                 }
+                             }
 
-            parts = data.split("   Firmware Version ");
-            if(parts.length > 1){
-                firmwareVersion = stripTrailingBarAndTrim(parts[1]);
-            }
-            else{
-                var found = false;
-                for(var entry in fieldStringSplitMap){
-                    for(var key in fieldStringSplitMap[entry]){ // there will only be one
-                        parts = data.split(key);
-                        if(parts.length > 1){
-                            found = true;
-                            var arg = null;
-                            if(parts[0].length > 0){
-                                if(fieldStringSplitMap[entry][key][1] == null){
-                                    arg = parts[0].trim();
-                                }
-                                else{
-                                    arg = fieldStringSplitMap[entry][key][1](parts[0])
-                                }
-                            }
-                            else{
-                                if(fieldStringSplitMap[entry][key][1] == null){
-                                    arg = parts[1].trim();
-                                }
-                                else{
-                                    arg = fieldStringSplitMap[entry][key][1](parts[1])
-                                }
-                            }
+                             dataRecordBySerialNumber[serialNumber][fieldStringSplitMap[entry][key][0]] = [arg];
+                             break;
+                         }
+                     }
 
-                            dataRecordBySerialNumber[serialNumber][fieldStringSplitMap[entry][key][0]] = [arg];
-                            break;
-                        }
-                    }
-
-                    if(found){
-                        break;
-                    }
-                }
-            }
-
-            if(serialNumber && lineCount > 80){
-                sp.close(function(){
-                    console.log("close");
-                    console.log(dataRecordBySerialNumber);
-                    callback(null);
-                });
-            }
-        });
-    });
+                     if(found){
+                         break;
+                     }
+                 }
+             }
+         },
+         null // function to call after all commands have been sent [null because we're going to close the port after]
+    );
 }
 
 router.get('/data/:serialNumber', function(req, res, next) {
@@ -134,87 +187,27 @@ function commitValuesToSerialPort(objData, portName, callback){
         parser: serialPort.parsers.readline("\n")
     });
 
-    var lineCount = 0;
-    sp.on("open", function () {
-        console.log('open');
-        sp.on('data', function (data) {
-            console.log('line ' + lineCount + ': ' + data);
-            lineCount++;
-            if (lineCount == 21) {
-                waterfall([
-                    function(callback){
-                        setTimeout(function(){
-                            console.log("wrote aqe");
-                            sp.write("aqe\r");
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])) + "\r");
-                            console.log("wrote no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])));
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("no2_off " + objData["no2-offset"].trim() + "\r");
-                            console.log("wrote no2_off " + objData["no2-offset"].trim());
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])) + "\r");
-                            console.log("wrote co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])));
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("co_off " + objData["co-offset"].trim() + "\r");
-                            console.log("wrote co_off " + objData["co-offset"].trim());
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("mqttpwd " + objData["mqtt-password"].trim() + "\r");
-                            console.log("wrote mqttpwd " + objData["mqtt-password"].trim());
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("backup all\r");
-                            console.log("wrote backup all");
-                            callback(null);
-                        }, 500);
-                    },
-                    function(callback){
-                        setTimeout(function(){
-                            sp.write("restore defaults\r");
-                            console.log("wrote restore defaults");
-                            callback(null);
-                        }, 500);
-                    }
-                ],
-                function(err){
-
-                });
-            }
-
-            if(lineCount == 100){
-                setTimeout(function(){
-                    sp.close();
-                    console.log("serial port closed.");
-                    callback(null);
-                }, 5000);
-            }
-        });
-    });
-
-
+    sendCommandList(
+        sp, // the port to target
+        null, // on serial port open [null because we don't need to hang on to the handles]
+        21, // number of lines before starting to issue commands
+        [
+            "aqe",
+            "no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])),
+            "no2_off " + objData["no2-offset"].trim(),
+            "co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])),
+            "co_off " + objData["co-offset"].trim(),
+            "mqttpwd " + objData["mqtt-password"].trim(),
+            "backup all",
+            "restore defaults"
+        ], // the list of commands
+        500, // how long to wait between sending each command
+        100, // the number of lines to wait before closing the port
+        5000, // the time to wait after that many lines before closing the port
+        callback, // the function to call after closing the port
+        null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
+        null // function to call after all commands have been sent [null because we are just going to close the port when done]
+    );
 }
 
 router.get('/startcalibration', function(req, res, next) {
@@ -224,88 +217,47 @@ router.get('/startcalibration', function(req, res, next) {
             parser: serialPort.parsers.readline("\n")
         });
 
-        var lineCount = 0;
-        sp.on("open", function () {
-            console.log('open');
-
-            openHandles.push(sp);
-
-            sp.on('data', function (data) {
-                console.log('line ' + lineCount + ': ' + data);
-                lineCount++;
-                if (lineCount == 21) {
-                    waterfall([
-                            function (callback) {
-                                setTimeout(function () {
-                                    console.log("wrote aqe");
-                                    sp.write("aqe\r");
-                                    callback(null);
-                                }, 500);
-                            },
-                            function (callback) {
-                                setTimeout(function () {
-                                    console.log("wrote opmode offline");
-                                    sp.write("opmode offline\r");
-                                    callback(null);
-                                }, 500);
-                            },
-                            function (callback) {
-                                setTimeout(function () {
-                                    console.log("wrote temp_off 0");
-                                    sp.write("temp_off 0\r");
-                                    callback(null);
-                                }, 500);
-                            },
-                            function (callback) {
-                                setTimeout(function () {
-                                    console.log("wrote hum_off 0");
-                                    sp.write("hum_off 0\r");
-                                    callback(null);
-                                }, 500);
-                            },
-                            function (callback) {
-                                setTimeout(function () {
-                                    console.log("wrote backup all");
-                                    sp.write("backup all\r");
-                                    callback(null);
-                                }, 500);
-                            },
-                            function (callback) {
-                                setTimeout(function () {
-                                    console.log("wrote exit");
-                                    sp.write("exit\r");
-                                    callback(null);
-                                }, 500);
-                            }
-                        ],
-                        function (err) {
-                            console.log("done for now.")
-                            callback(null);
-                        });
-
-                }
-                else {
-                    // if the line starts with "csv:" pull the current values out and store them in a global
-                    if (data.trim().slice(0, 4) == "csv:") {
-                        parts = data.trim().slice(4).split(",");
-                        if(parts.length > 2 && isNumeric(parts[1])){
-                            if(!currentCalibrationValues[port.serialNumber]) {
-                                currentCalibrationValues[port.serialNumber] = {};
-                            }
-                            currentCalibrationValues[port.serialNumber]["Temperature"] = parseFloat(parts[1]);
+        sendCommandList(
+            sp, // the port to target
+            function(sp){  // on serial port open, collect the handles so we can close them later
+                openHandles.push(sp);
+            },
+            21, // number of lines before starting to issue commands
+            [
+                "aqe",
+                "opmode offline",
+                "temp_off 0",
+                "hum_off 0",
+                "backup all",
+                "exit"
+            ], // the list of commands
+            500, // how long to wait between sending each command
+            null, // the number of lines to wait before closing the port [null because we aren't going to close the port at all here]
+            null, // the time to wait after that many lines before closing the port [null because we aren't going to close the port at all here]
+            null, // the function to call after closing the port [null because we aren't going to close the port at all here]
+            function(data) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
+                // if the line starts with "csv:" pull the current values out and store them in a global
+                if (data.trim().slice(0, 4) == "csv:") {
+                    parts = data.trim().slice(4).split(",");
+                    if(parts.length > 2 && isNumeric(parts[1])){
+                        if(!currentCalibrationValues[port.serialNumber]) {
+                            currentCalibrationValues[port.serialNumber] = {};
                         }
+                        currentCalibrationValues[port.serialNumber]["Temperature"] = parseFloat(parts[1]);
+                    }
 
-                        if(parts.length > 3 && isNumeric(parts[2])){
-                            if(!currentCalibrationValues[port.serialNumber]) {
-                                currentCalibrationValues[port.serialNumber] = {};
-                            }
-                            currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[2]);
+                    if(parts.length > 3 && isNumeric(parts[2])){
+                        if(!currentCalibrationValues[port.serialNumber]) {
+                            currentCalibrationValues[port.serialNumber] = {};
                         }
+                        currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[2]);
                     }
                 }
-            });
-        });
-    },function(err){
+            },
+            callback // function to call after all commands have been sent, [return from http response here because we aren't going to close the port here]
+        );
+    },
+    function(err){
         res.json(allPorts);
     });
 });
@@ -328,7 +280,8 @@ router.get("/currentcalibrationdata", function(req, res, next){
 });
 
 router.post('/applycalibrations', function(req, res, next) {
-    // I have no idea why i have to jump through hoops here
+
+    //TODO: I have no idea why i have to jump through hoops here in order to parse the posted object
     var obj = req.body;
     for(var key in obj){
         obj = JSON.parse(key);
@@ -336,79 +289,40 @@ router.post('/applycalibrations', function(req, res, next) {
     }
 
     console.log(obj);
-    async.forEach(allPorts, function(port, callback) {
-        var sp = new SerialPort(port.comName, {
-            baudrate: 115200,
-            parser: serialPort.parsers.readline("\n")
-        });
 
-        var lineCount = 0;
+    async.forEach(allPorts, function(port, callback) {
         var serialNumber = port.serialNumber;
 
         if(!obj[serialNumber]){ // no data for this port was sent
             callback(null);
         }
         else {
+            var sp = new SerialPort(port.comName, {
+                baudrate: 115200,
+                parser: serialPort.parsers.readline("\n")
+            });
+
             var temp_off = obj[serialNumber]["temp_off"];
             var hum_off = obj[serialNumber]["hum_off"];
 
-            sp.on("open", function () {
-                console.log('open');
-                sp.on('data', function (data) {
-                    console.log('line ' + lineCount + ': ' + data);
-                    lineCount++;
-                    if (lineCount == 21) {
-                        waterfall([
-                                function (callback) {
-                                    setTimeout(function () {
-                                        console.log("wrote aqe");
-                                        sp.write("aqe\r");
-                                        callback(null);
-                                    }, 500);
-                                },
-                                function (callback) {
-                                    setTimeout(function () {
-                                        console.log("wrote temp_off " + temp_off);
-                                        sp.write("temp_off " + temp_off + "\r");
-                                        callback(null);
-                                    }, 500);
-                                },
-                                function (callback) {
-                                    setTimeout(function () {
-                                        console.log("wrote hum_off " + hum_off + "");
-                                        sp.write("hum_off " + hum_off + "\r");
-                                        callback(null);
-                                    }, 500);
-                                },
-                                function (callback) {
-                                    setTimeout(function () {
-                                        console.log("wrote backup all");
-                                        sp.write("backup all\r");
-                                        callback(null);
-                                    }, 500);
-                                },
-                                function (callback) {
-                                    setTimeout(function () {
-                                        console.log("wrote restore defaults");
-                                        sp.write("restore defaults\r");
-                                        callback(null);
-                                    }, 500);
-                                }
-                            ],
-                            function (err) {
-
-                            });
-                    }
-
-                    if (lineCount == 100) {
-                        setTimeout(function () {
-                            sp.close();
-                            console.log("serial port closed.");
-                            callback(null);
-                        }, 5000);
-                    }
-                });
-            });
+            sendCommandList(
+                sp, // the port to target
+                null, // on serial port open, [null because we are going to the close the port before we're done]
+                21, // number of lines before starting to issue commands
+                [
+                    "aqe",
+                    "temp_off " + temp_off,
+                    "hum_off " + hum_off,
+                    "backup all",
+                    "restore defaults"
+                ], // the list of commands
+                500, // how long to wait between sending each command
+                100, // the number of lines to wait before closing the port
+                5000, // the time to wait after that many lines before closing the port
+                callback, // the function to call after closing the port
+                null, // what to do whenever you get a data line, [null because we are not processing Egg output]
+                null // function to call after all commands have been sent [null because we are going to callback when we close the port]
+            );
         }
     },function(err){
         res.json(allPorts);
