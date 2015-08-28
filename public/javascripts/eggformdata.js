@@ -2,7 +2,6 @@ function loadFormDataForEgg(serialNumber, reload){
     $("#feedback").css("background-color", "yellow");
     $("#feedback").css("color", "black");
     $("#feedback").text("Getting Form Data...");
-    $("#wait-for-form-data").show();
     $("#wait-for-form-data").css("background-color", "yellow");
     $("#wait-for-form-data").css("color", "black");
 
@@ -10,8 +9,12 @@ function loadFormDataForEgg(serialNumber, reload){
         reload = false;
     }
 
+    if(reload != false){
+        $("#wait-for-form-data").show();
+    }
 
-    if(serialNumber && serialNumber != "") {
+
+    if(!serialNumber || serialNumber == "") {
         serialNumber = 0;
     }
 
