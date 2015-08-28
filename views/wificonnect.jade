@@ -1,0 +1,31 @@
+extends layout
+block content
+    #feedback
+    #wait-for-serial-ports Please be patient while Serial Ports processing completes...
+
+    #calibration-buttons
+        #serial-port-div
+            label Serial Ports:
+            select#serial_ports
+                option(value="0") Please Wait...
+            input#list-ports-button.btn.btn-default(type="button", value="Refresh Serial Ports")
+        #wifi-credentials
+
+
+
+
+        input#apply-settings-button.btn.btn-default(type="button", value="Apply Settings ")
+        input#start-acquisition-button.btn.btn-default(type="button", value="Test Wi-Fi Connection")
+        input#clear-settings-button.btn.btn-default(type="button", value="Clear Settings ")
+
+    #calibration-inputs
+        label SSID:
+        input#wifi-ssid(type="text")
+        br
+        label Password:
+        input#wifi-password(type="password")
+
+    table#network-table.table-striped(border="2")
+        tr
+            th Serial Number
+            th Network Status

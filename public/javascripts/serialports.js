@@ -38,78 +38,82 @@ function listPorts(){
 
 
 $(function(){
-    listPorts();
+    
+    if($("#wait-for-serial-ports").length) {
 
-    // attach click events to Serial Port buttons
-    $("#list-ports-button").click(function(){
         listPorts();
-    });
 
-    $("#commit-form-data-to-serial-port-button").click(function(){
-        $("#feedback").css("background-color", "yellow");
-        $("#feedback").css("color", "black");
-        $("#feedback").text("Committing Serial Data...");
-
-        $.post("/serialports/commit/" + $("#serial_ports option:selected").val(), {
-            "co-sensitivity": $("#form-data-co-sensitivity").text(),
-            "co-offset": $("#form-data-co-offset").text(),
-            "no2-sensitivity": $("#form-data-no2-sensitivity").text(),
-            "no2-offset": $("#form-data-no2-offset").text(),
-            "mqtt-password": $("#form-data-open-sensors-password").text()
-        },
-        function(){
-            $("#feedback").css("background-color", "green");
-            $("#feedback").css("color", "white");
-            $("#feedback").text("Committing Serial Data... Complete");
+        // attach click events to Serial Port buttons
+        $("#list-ports-button").click(function () {
+            listPorts();
         });
-    });
 
-    $("#connect-to-port-button").click(function(){
-        $("#feedback").css("background-color", "yellow");
-        $("#feedback").css("color", "black");
-        $("#feedback").text("Getting Serial Data...");
-        clearValidationHighlights();
-        $("#comName").text("");
-        
-        $("#egg_serial_number").val($("#serial_ports option:selected").val());
+        $("#commit-form-data-to-serial-port-button").click(function () {
+            $("#feedback").css("background-color", "yellow");
+            $("#feedback").css("color", "black");
+            $("#feedback").text("Committing Serial Data...");
 
-        loadFormDataForEgg($("#egg_serial_number").val());
+            $.post("/serialports/commit/" + $("#serial_ports option:selected").val(), {
+                    "co-sensitivity": $("#form-data-co-sensitivity").text(),
+                    "co-offset": $("#form-data-co-offset").text(),
+                    "no2-sensitivity": $("#form-data-no2-sensitivity").text(),
+                    "no2-offset": $("#form-data-no2-offset").text(),
+                    "mqtt-password": $("#form-data-open-sensors-password").text()
+                },
+                function () {
+                    $("#feedback").css("background-color", "green");
+                    $("#feedback").css("color", "white");
+                    $("#feedback").text("Committing Serial Data... Complete");
+                });
+        });
 
-        $.getJSON( '/serialports/data/' + $("#serial_ports option:selected").val(), function( data ) {
-            console.log(data);
-            var fields_of_interest_view_map = [
-                {"CC3000 MAC address": "#serial-data-mac-address"},
-                {"Open Sensors .io password": "#serial-data-open-sensors-password"},
-                {"Shipped Firmware Version": "#serial-data-shipped-firmware"},
-                {"CO Sensitivity": "#serial-data-co-sensitivity"},
-                {"CO Sensor Zero Value": "#serial-data-co-offset"},
-                {"NO2 Sensitivity": "#serial-data-no2-sensitivity"},
-                {"NO2 Sensor Zero Value": "#serial-data-no2-offset"},
-                {"Temperature Offset": "#serial-data-temperature-offset"},
-                {"Humidity Offset": "#serial-data-humidity-offset"},
-                {"OpenSensors Username": "#serial-data-open-sensors-username" }
-            ];
+        $("#connect-to-port-button").click(function () {
+            $("#feedback").css("background-color", "yellow");
+            $("#feedback").css("color", "black");
+            $("#feedback").text("Getting Serial Data...");
+            clearValidationHighlights();
+            $("#comName").text("");
 
-            $("#comName").text( data["comName"]);
+            $("#egg_serial_number").val($("#serial_ports option:selected").val());
 
-            for(entry in fields_of_interest_view_map){
-                var field_map = fields_of_interest_view_map[entry];
-                for(key in field_map){
-                    $(field_map[key]).html("");
-                    if(data[key]){
-                        if(data[key].length == 1 && (""+data[key][0]).trim() != "") {
-                            $(field_map[key]).html(("" + data[key][0]).replace(/\n/g, "<br />"));
-                        }
-                        else if(data[key].length >= 1 && key == "SHT25 / Egg Serial Number"){
-                            $(field_map[key]).html(("egg" + data[key][0]).replace(/\n/g, "<br />"));
+            loadFormDataForEgg($("#egg_serial_number").val());
+
+            $.getJSON('/serialports/data/' + $("#serial_ports option:selected").val(), function (data) {
+                console.log(data);
+                var fields_of_interest_view_map = [
+                    {"CC3000 MAC address": "#serial-data-mac-address"},
+                    {"Open Sensors .io password": "#serial-data-open-sensors-password"},
+                    {"Shipped Firmware Version": "#serial-data-shipped-firmware"},
+                    {"CO Sensitivity": "#serial-data-co-sensitivity"},
+                    {"CO Sensor Zero Value": "#serial-data-co-offset"},
+                    {"NO2 Sensitivity": "#serial-data-no2-sensitivity"},
+                    {"NO2 Sensor Zero Value": "#serial-data-no2-offset"},
+                    {"Temperature Offset": "#serial-data-temperature-offset"},
+                    {"Humidity Offset": "#serial-data-humidity-offset"},
+                    {"OpenSensors Username": "#serial-data-open-sensors-username"}
+                ];
+
+                $("#comName").text(data["comName"]);
+
+                for (entry in fields_of_interest_view_map) {
+                    var field_map = fields_of_interest_view_map[entry];
+                    for (key in field_map) {
+                        $(field_map[key]).html("");
+                        if (data[key]) {
+                            if (data[key].length == 1 && ("" + data[key][0]).trim() != "") {
+                                $(field_map[key]).html(("" + data[key][0]).replace(/\n/g, "<br />"));
+                            }
+                            else if (data[key].length >= 1 && key == "SHT25 / Egg Serial Number") {
+                                $(field_map[key]).html(("egg" + data[key][0]).replace(/\n/g, "<br />"));
+                            }
                         }
                     }
                 }
-            }
 
-            $("#feedback").css("background-color", "green");
-            $("#feedback").css("color", "white");
-            $("#feedback").text("Getting Serial Data... Complete");
+                $("#feedback").css("background-color", "green");
+                $("#feedback").css("color", "white");
+                $("#feedback").text("Getting Serial Data... Complete");
+            });
         });
-    });
+    }
 });

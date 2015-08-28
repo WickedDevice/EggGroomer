@@ -10,6 +10,7 @@ var users = require('./routes/users');
 var serialports = require('./routes/serialports');
 var eggformdata = require('./routes/eggformdata');
 var calibration = require('./routes/calibration');
+var wificonnect = require('./routes/wificonnect');
 var app = express();
 
 // view engine setup
@@ -29,6 +30,7 @@ app.use('/users', users);
 app.use('/serialports', serialports);
 app.use('/eggformdata', eggformdata);
 app.use('/calibration', calibration);
+app.use('/wificonnect', wificonnect);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -71,14 +71,16 @@ function loadFormDataForEgg(serialNumber, reload){
 }
 
 $(function(){
+    if($("#wait-for-form-data").length) {
 
-    loadFormDataForEgg();
+        loadFormDataForEgg();
 
-    $('#get-form-data-button').click(function(){
-        loadFormDataForEgg($("#egg_serial_number").val(), false);
-    });
+        $('#get-form-data-button').click(function () {
+            loadFormDataForEgg($("#egg_serial_number").val(), false);
+        });
 
-    $('#refresh-form-data-button').click(function(){
-        loadFormDataForEgg($("#egg_serial_number").val(), true); // reload and load data
-    });
+        $('#refresh-form-data-button').click(function () {
+            loadFormDataForEgg($("#egg_serial_number").val(), true); // reload and load data
+        });
+    }
 });
