@@ -323,11 +323,54 @@ router.get('/startwificonnect', function(req, res, next) {
                 null, // the time to wait after that many lines before closing the port [null because we aren't going to close the port at all here]
                 null, // the function to call after closing the port [null because we aren't going to close the port at all here]
                 function(data) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
-                    // do stuff with currentNetworkValues, based on content of data
-                    // currentNetworkValues[port.serialNumber]["Status"] =  "..."
-                    //TODO: process the data and update status of the Egg
-                    // record the "farthest" it has gotten so far during this test and keep track of if it resets
+                    if(!currentNetworkValues[port.serialNumber]) {
+                        currentNetworkValues[port.serialNumber] = {};
+                    }
 
+                    if(data.indexOf('Beginning Network Scan...') > -1){
+                        currentNetworkValues[port.serialNumber]["Status"] = "Scanning";
+                    }
+                    else if(data.indexOf('Network Scan found') > -1){
+                        currentNetworkValues[port.serialNumber]["Status"] = "Scan found " + data.slice("Info: Network Scan found ".length);
+                    }
+                    else if(data.indexOf('Found Access Point') > -1){
+                        var rssi = data.match('RSSI = ([0-9]+)');
+                        if(rssi) {
+                            currentNetworkValues[port.serialNumber]["Status"] = "Network found - RSSI " + rssi[1];
+                        }
+                        else{
+                            currentNetworkValues[port.serialNumber]["Status"] = "Network found - no RSSI";
+                        }
+                    }
+                    else if(data.indexOf('Connecting to Access Point with SSID') > -1){
+                        var ok = data.match(/OK\.$/);
+                        if(ok){
+                            currentNetworkValues[port.serialNumber]["Status"] = "Connected";
+                        }
+                        else{
+                            currentNetworkValues[port.serialNumber]["Status"] = "Connect Failed";
+                        }
+                    }
+                    else if(data.indexOf('Request DHCP...') > -1){
+                        var ok = data.match(/OK$/);
+                        if(ok){
+                            currentNetworkValues[port.serialNumber]["Status"] = "Got DHCP";
+                        }
+                        else{
+                            currentNetworkValues[port.serialNumber]["Status"] = "DHCP Failed";
+                        }
+                    }
+                    else if(data.indexOf('IP Addr:') > -1){
+                        currentNetworkValues[port.serialNumber]["Status"] = "IP: " +data.slice("Info: IP Addr: ".length);
+                    }
+                    else if(data.indexOf('MQTT Broker') > -1){
+                        if(data.indexOf('OK') > -1){
+                            currentNetworkValues[port.serialNumber]["Status"] = "Connected to MQTT";
+                        }
+                        else{
+                            currentNetworkValues[port.serialNumber]["Status"] = "MQTT Failed";
+                        }
+                    }
                 },
                 callback // function to call after all commands have been sent, [return from http response here because we aren't going to close the port here]
             );
@@ -459,6 +502,41 @@ router.post('/applynetworksettings', function(req, res, next) {
     });
 
 });
+
+router.post('/clearwifisettings', function(req, res, next) {
+    async.forEach(allPorts, function(port, callback) {
+        var serialNumber = port.serialNumber;
+
+        if(!serialNumber){ // no data for this port was sent
+            callback(null);
+        }
+        else {
+            var sp = new SerialPort(port.comName, {
+                baudrate: 115200,
+                parser: serialPort.parsers.readline("\n")
+            });
+            sendCommandList(
+                sp, // the port to target
+                null, // on serial port open, [null because we are going to the close the port before we're done]
+                21, // number of lines before starting to issue commands
+                [
+                    "aqe",
+                    "restore defaults",
+                ], // the list of commands
+                500, // how long to wait between sending each command
+                100, // the number of lines to wait before closing the port
+                5000, // the time to wait after that many lines before closing the port
+                callback, // the function to call after closing the port
+                null, // what to do whenever you get a data line, [null because we are not processing Egg output]
+                null // function to call after all commands have been sent [null because we are going to callback when we close the port]
+            );
+        }
+    },function(err){
+        res.json(allPorts);
+    });
+
+});
+
 
 router.post('/commit/:serialNumber', function(req, res, next) {
     var found_it = false;
