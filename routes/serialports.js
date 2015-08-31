@@ -53,6 +53,7 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
 
     sp.on("open", function () {
         console.log('open');
+        openHandles.push(sp);
 
         if(functionToCallOnSpOpen !== null){
             functionToCallOnSpOpen(sp);
@@ -73,7 +74,24 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
 
             if(lineCount !== null && lineCount == numLinesToWaitForBeforeClosing){
                 setTimeout(function(){
-                    sp.close();
+
+                    var path = sp.path;
+                    if(sp.isOpen()) {
+                        sp.close();
+                    }
+
+                    var indexToRemove = -1;
+                    for(var i = 0; i < openHandles.length; ii++){
+                        if(openHandles[i].path == path){
+                            indexToRemove = i;
+                            break;
+                        }
+                    }
+
+                    if (indexToRemove > -1) {
+                        openHandles.splice(indexToRemove, 1);
+                    }
+
                     console.log("serial port closed.");
                     if(functionToCallAfterClosing !== null){
                         functionToCallAfterClosing(null);
@@ -329,6 +347,12 @@ router.get('/startwificonnect', function(req, res, next) {
                         currentNetworkValues[port.serialNumber] = {};
                     }
 
+                    if(!data){
+                        return;
+                    }
+
+                    data = data.trim();
+
                     if(data.indexOf('Beginning Network Scan...') > -1){
                         currentNetworkValues[port.serialNumber]["Status"] = "Scanning";
                     }
@@ -577,6 +601,13 @@ router.get('/', function(req, res, next) {
     guardListPorts = true;
     allPorts = [];
     dataRecordBySerialNumber = [];
+
+    for(var i = 0; i < openHandles.length; ii++){
+        if(openHandles[i].isOpen()){
+            openHandles[i].close();
+        }
+    }
+    openHandles = [];
 
     waterfall(
         [
