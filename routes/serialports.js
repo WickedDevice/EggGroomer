@@ -384,12 +384,15 @@ router.get('/startwificonnect', function(req, res, next) {
 
 router.get('/disconnectAll', function(req, res, next) {
     async.forEach(openHandles, function(sp, callback){
-        sp.close(function(){
-            console.log("close");
-            callback(null);
-        });
+        if(sp && sp.isOpen()) {
+            sp.close(function () {
+                console.log("close");
+                callback(null);
+            });
+        }
     },
     function(err) {
+        openHandles = [];
         res.json({status: "OK"});
     });
 });
