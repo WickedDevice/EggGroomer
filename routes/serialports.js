@@ -243,6 +243,8 @@ router.get('/startcalibration', function(req, res, next) {
         if(req.query.zero == "true"){
             commands = [
                 "aqe",
+                "init mac",
+                "restore defaults",
                 "opmode offline",
                 "temp_off 0",
                 "hum_off 0",
