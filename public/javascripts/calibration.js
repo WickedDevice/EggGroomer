@@ -1,9 +1,9 @@
 var calibration_in_progress = false;
 var calibration_started_at_some_point = false;
 
-var poisonPill;
+var calibrationPoisonPill;
 
-function doPoll(){
+function doCalibrationPoll(){
     $.get('/serialports/currentcalibrationdata', function(data) {
         for(var key in data){ // keys are Serial Numbers here
             // if the table doesn't already have a row for this key, create one
@@ -19,13 +19,13 @@ function doPoll(){
             }
         }
 
-        poisonPill = setTimeout(doPoll, 5000);
+        calibrationPoisonPill = setTimeout(doCalibrationPoll, 5000);
     });
 }
 
 function cancelPoll(){
-    if(poisonPill) {
-        clearTimeout(poisonPill);
+    if(calibrationPoisonPill) {
+        clearTimeout(calibrationPoisonPill);
     }
 }
 
@@ -50,7 +50,7 @@ function startDataCapture(zeroOffsets){
             $("#feedback").text("Calibration In Progress...");
 
             // kick off a periodic timer to update the table occationally
-            doPoll();
+            doCalibrationPoll();
         });
     }
 }

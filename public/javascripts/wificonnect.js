@@ -1,9 +1,9 @@
 var something_in_progress = false;
 var wifi_testing_in_progress = false;
 
-var poisonPill;
+var wifiPoisonPill;
 
-function doPoll(){
+function doWiFiPoll(){
     $.get('/serialports/currentwifistatus', function(data) {
         for(var key in data){ // keys are Serial Numbers here
             // if the table doesn't already have a row for this key, create one
@@ -19,13 +19,13 @@ function doPoll(){
             }
         }
 
-        poisonPill = setTimeout(doPoll, 5000);
+        wifiPoisonPill = setTimeout(doWiFiPoll, 5000);
     });
 }
 
 function cancelPoll(){
-    if(poisonPill) {
-        clearTimeout(poisonPill);
+    if(wifiPoisonPill) {
+        clearTimeout(wifiPoisonPill);
     }
 }
 
@@ -44,7 +44,7 @@ $(function(){
                 $("#feedback").text("Wi-Fi Testing In Progress...");
 
                 // kick off a periodic timer to update the table occationally
-                doPoll();
+                doWiFiPoll();
                 something_in_progress = false;
             });
         }
