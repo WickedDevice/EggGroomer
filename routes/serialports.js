@@ -81,7 +81,7 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
                     }
 
                     var indexToRemove = -1;
-                    for(var i = 0; i < openHandles.length; ii++){
+                    for(var i = 0; i < openHandles.length; i++){
                         if(openHandles[i].path == path){
                             indexToRemove = i;
                             break;
