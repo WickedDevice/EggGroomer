@@ -23,7 +23,7 @@ function doWiFiPoll(){
     });
 }
 
-function cancelPoll(){
+function cancelWiFiPoll(){
     if(wifiPoisonPill) {
         clearTimeout(wifiPoisonPill);
     }
@@ -62,7 +62,7 @@ $(function(){
                 $("#feedback").css("color", "white");
                 $("#feedback").text("Wi-Fi Testing Stopped...");
 
-                cancelPoll();
+                cancelWiFiPoll();
                 something_in_progress = false;
                 wifi_testing_in_progress = false;
             });

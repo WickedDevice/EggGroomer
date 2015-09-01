@@ -23,7 +23,7 @@ function doCalibrationPoll(){
     });
 }
 
-function cancelPoll(){
+function cancelCalibrationPoll(){
     if(calibrationPoisonPill) {
         clearTimeout(calibrationPoisonPill);
     }
@@ -64,8 +64,8 @@ $(function(){
         startDataCapture(true);
     });
 
-    $("#stop-calibration-button").click(function(){
-        if(calibration_in_progress){
+    $("#stop-calibration-button").click(
+        function(){
             calibration_in_progress = false;
             $("#feedback").css("background-color", "yellow");
             $("#feedback").css("color", "black");
@@ -76,10 +76,10 @@ $(function(){
                 $("#feedback").css("color", "white");
                 $("#feedback").text("Calibration Stopped...");
 
-                cancelPoll();
+                cancelCalibrationPoll();
             });
         }
-    });
+    );
 
     $("#apply-calibration-button").click(function(){
         if(!calibration_in_progress && calibration_started_at_some_point){

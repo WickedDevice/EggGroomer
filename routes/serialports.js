@@ -74,7 +74,6 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
 
             if(lineCount !== null && lineCount == numLinesToWaitForBeforeClosing){
                 setTimeout(function(){
-
                     var path = sp.path;
                     if(sp.isOpen()) {
                         sp.close();
