@@ -75,9 +75,9 @@ $(function(){
                 $("#feedback").css("background-color", "green");
                 $("#feedback").css("color", "white");
                 $("#feedback").text("Calibration Stopped...");
-
-                cancelCalibrationPoll();
             });
+
+            cancelCalibrationPoll();
         }
     );
 

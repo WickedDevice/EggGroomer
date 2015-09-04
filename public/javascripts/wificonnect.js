@@ -61,11 +61,11 @@ $(function(){
                 $("#feedback").css("background-color", "green");
                 $("#feedback").css("color", "white");
                 $("#feedback").text("Wi-Fi Testing Stopped...");
-
-                cancelWiFiPoll();
-                something_in_progress = false;
-                wifi_testing_in_progress = false;
             });
+
+            cancelWiFiPoll();
+            something_in_progress = false;
+            wifi_testing_in_progress = false;
         }
     });
 
