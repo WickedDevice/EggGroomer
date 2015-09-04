@@ -106,7 +106,9 @@ function validateValuesEqual(suffix){
 }
 
 function validateSensitivity(suffix){
-    if(parseFloat($("#serial-"+suffix).text()) < 0){
+
+    var value = parseFloat($("#serial-"+suffix).text());
+    if(isNaN(value) || value < 0){
         highlightSerialFieldError(suffix);
         return false;
     }
@@ -119,7 +121,17 @@ function validateSensitivity(suffix){
 }
 
 function validateOffset(suffix){
-    if(Math.abs(parseFloat($("#form-"+suffix).text()) - parseFloat($("#serial-"+suffix).text())) > 0.00001){
+    var formvalue = parseFloat($("#form-"+suffix).text());
+    var serialvalue = parseFloat($("#serial-"+suffix).text());
+
+    if(isNaN(formvalue)){
+        highlightFormFieldError(suffix);
+    }
+    if(isNaN(serialvalue)){
+        highlightSerialFieldError(suffix);
+    }
+
+    if(!isNaN(formvalue) && !isNaN(serialvalue) && (Math.abs(formvalue) - serialvalue) > 0.00001){
         highlightRowError(suffix);
         return false;
     }
