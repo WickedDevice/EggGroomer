@@ -131,7 +131,7 @@ function validateOffset(suffix){
         highlightSerialFieldError(suffix);
     }
 
-    if(!isNaN(formvalue) && !isNaN(serialvalue) && (Math.abs(formvalue) - serialvalue) > 0.00001){
+    if(!isNaN(formvalue) && !isNaN(serialvalue) && (Math.abs(formvalue - serialvalue) > 0.00001)){
         highlightRowError(suffix);
         return false;
     }
