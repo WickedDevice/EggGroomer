@@ -116,9 +116,14 @@ function openSerialPort(portName, obj, callback){
         {"    CO Offset [V]: ": ["CO Sensor Zero Value", null]},
         {"    NO2 Sensitivity [nA/ppm]: ": ["NO2 Sensitivity", null]},
         {"    NO2 Offset [V]: ": ["NO2 Sensor Zero Value", null]},
+        {"    O3 Sensitivity [nA/ppm]: ": ["O3 Sensitivity", null]},
+        {"    O3 Offset [V]: ": ["O3 Sensor Zero Value", null]},
+        {"    SO2 Sensitivity [nA/ppm]: ": ["SO2 Sensitivity", null]},
+        {"    SO2 Offset [V]: ": ["SO2 Sensor Zero Value", null]},
         {"    Temperature Reporting Offset [degC]: ": ["Temperature Offset", null]},
         {"    Humidity Reporting Offset [%]: ": ["Humidity Offset", null]},
         {"    MQTT Client ID: ": ["OpenSensors Username", null]}
+
     ];
 
     var sp = new SerialPort(portName, {

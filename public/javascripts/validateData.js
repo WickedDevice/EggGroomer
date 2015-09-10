@@ -162,6 +162,7 @@ function validatePopulatedData(){
     if(!validateRowNotEmpty("data-open-sensors-password")){ ret = false; }
     if(!validateSerialFieldNotEqualToValue("data-open-sensors-password", "NOT Backed Up")){ ret = false; }
     if(!validateValuesEqual("data-shipped-firmware")){ ret = false; }
+
     if(!validateFormFieldNotEmpty("data-co-serial-number")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-co-date-code")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-no2-serial-number")){ ret = false; }
@@ -174,6 +175,20 @@ function validatePopulatedData(){
     if(!validateRowNotEmpty("data-co-offset")){ ret = false; }
     if(!validateOffset("data-no2-offset")){ ret = false; }
     if(!validateRowNotEmpty("data-no2-offset")){ ret = false; }
+
+    if(!validateFormFieldNotEmpty("data-o3-serial-number")){ ret = false; }
+    if(!validateFormFieldNotEmpty("data-o3-date-code")){ ret = false; }
+    if(!validateFormFieldNotEmpty("data-so2-serial-number")){ ret = false; }
+    if(!validateFormFieldNotEmpty("data-so2-date-code")){ ret = false; }
+    if(!validateSensitivity("data-o3-sensitivity")){ ret = false; }
+    if(!validateRowNotEmpty("data-o3-sensitivity")){ ret = false; }
+    if(!validateSensitivity("data-so2-sensitivity")){ ret = false; }
+    if(!validateRowNotEmpty("data-so2-sensitivity")){ ret = false; }
+    if(!validateOffset("data-o3-offset")){ ret = false; }
+    if(!validateRowNotEmpty("data-o3-offset")){ ret = false; }
+    if(!validateOffset("data-so2-offset")){ ret = false; }
+    if(!validateRowNotEmpty("data-so2-offset")){ ret = false; }
+
     if(!validateEggSerialNumber("data-open-sensors-username")){ ret = false; }
     if(!validateRowNotEmpty("data-open-sensors-username")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-date-shipped")){ ret = false; }
