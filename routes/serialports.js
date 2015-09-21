@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var waterfall = require('async-waterfall');
 var async = require('async');
 var serialPort = require("serialport");
 var SerialPort = require("serialport").SerialPort
@@ -30,26 +29,52 @@ function backedUpOrNot(str){
     }
 }
 
+var removeSerialPortHandleByPath = function(path){
+    var indexToRemove = -1;
+    for(var i = 0; i < openHandles.length; i++){
+        if(openHandles[i].path == path){
+            indexToRemove = i;
+            break;
+        }
+    }
+
+    if (indexToRemove > -1) {
+        openHandles.splice(indexToRemove, 1);
+    }
+}
+
 // sp is the serial port to target
 // numLinesToWaitForBeforeClosing can be null to not close the port
 // subsequentProcessingFunction can be null if there's nothing to do on each line received
 // functionToCallAfterAllCommandsSent can be null if there's nothing to do right after sending all the commands
 function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially, commandList, timeBetweenCommands,
                          numLinesToWaitForBeforeClosing, timeToWaitBeforeClosing, functionToCallAfterClosing,
-                         subsequentProcessingFunction, functionToCallAfterAllCommandsSent){
+                         subsequentProcessingFunction, functionToCallAfterAllCommandsSent, subsequentProcessingFunctionArgs){
 
     var commandFuncs = [];
     commandList.forEach( function(cmd){
         commandFuncs.push( function(callback){
                 setTimeout(function(){
-                    sp.write(cmd + "\r");
-                    callback(null);
+                    if(sp.isOpen()){
+                        console.log("Issuing command '" + cmd + "'");
+                        sp.write(cmd + "\r");
+                        sp.drain();
+                    }
+                    else{
+                        console.log("Port was closed, preventing command '" + cmd + "' from being issued");
+                    }
+                callback();
                 }, timeBetweenCommands);
             }
         );
     });
 
     var lineCount = 0;
+    var allCommandsSent = false;
+
+    commandFuncs.push( function(callback){
+        allCommandsSent = true;
+    });
 
     sp.on("open", function () {
         console.log('open');
@@ -59,73 +84,150 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
             functionToCallOnSpOpen(sp);
         }
 
+        var alreadySetTimeout = false;
+
         sp.on('data', function (data) {
-            console.log('line ' + lineCount + ': ' + data);
+            console.log(sp.path+ ' line ' + lineCount + ': ' + data);
             lineCount++;
             if (lineCount == numLinesToWaitForInitially) {
-                waterfall(
+                async.series(
                     commandFuncs,
                     function(err){
-                        if(functionToCallAfterAllCommandsSent !== null){
+                        if(err) return next(err);
+
+                        if(functionToCallAfterAllCommandsSent != null){
                             functionToCallAfterAllCommandsSent(err);
                         }
                     });
             }
 
-            if(lineCount !== null && lineCount == numLinesToWaitForBeforeClosing){
+
+            if(lineCount !== null && allCommandsSent && !alreadySetTimeout && lineCount >= numLinesToWaitForBeforeClosing){
+                alreadySetTimeout = true;
                 setTimeout(function(){
                     var path = sp.path;
                     if(sp.isOpen()) {
+                        console.log("Flushing and closing " + path)
+                        sp.flush();
+                        removeSerialPortHandleByPath(path);
                         sp.close();
                     }
 
-                    var indexToRemove = -1;
-                    for(var i = 0; i < openHandles.length; i++){
-                        if(openHandles[i].path == path){
-                            indexToRemove = i;
-                            break;
-                        }
-                    }
-
-                    if (indexToRemove > -1) {
-                        openHandles.splice(indexToRemove, 1);
-                    }
-
                     console.log("serial port closed.");
-                    if(functionToCallAfterClosing !== null){
+                    if(functionToCallAfterClosing){
                         functionToCallAfterClosing(null);
                     }
                 }, timeToWaitBeforeClosing);
             }
 
-            if(subsequentProcessingFunction !== null){
-                subsequentProcessingFunction(data);
+
+            if(subsequentProcessingFunction){
+                var args = subsequentProcessingFunctionArgs == null ? {} : subsequentProcessingFunctionArgs;
+                args["data"] = data;
+                subsequentProcessingFunction(args);
             }
 
         });
     });
 }
 
-function openSerialPort(portName, obj, callback){
+var fieldStringSplitMap = [
+    {"  |       Firmware Version ": ["Shipped Firmware Version", stripTrailingBarAndTrim]},
+    {"    MAC Address: ": ["CC3000 MAC address", null]},
+    {" MQTT Password backed up?": ["Open Sensors .io password", backedUpOrNot]},
+    {"    CO Sensitivity [nA/ppm]: ": ["CO Sensitivity", null]},
+    {"    CO Offset [V]: ": ["CO Sensor Zero Value", null]},
+    {"    NO2 Sensitivity [nA/ppm]: ": ["NO2 Sensitivity", null]},
+    {"    NO2 Offset [V]: ": ["NO2 Sensor Zero Value", null]},
+    {"    O3 Sensitivity [nA/ppm]: ": ["O3 Sensitivity", null]},
+    {"    O3 Offset [V]: ": ["O3 Sensor Zero Value", null]},
+    {"    SO2 Sensitivity [nA/ppm]: ": ["SO2 Sensitivity", null]},
+    {"    SO2 Offset [V]: ": ["SO2 Sensor Zero Value", null]},
+    {"    Temperature Reporting Offset [degC]: ": ["Temperature Offset", null]},
+    {"    Humidity Reporting Offset [%]: ": ["Humidity Offset", null]},
+    {"    MQTT Client ID: ": ["OpenSensors Username", null]}
 
-    var fieldStringSplitMap = [
-        {"  |       Firmware Version ": ["Shipped Firmware Version", stripTrailingBarAndTrim]},
-        {"    MAC Address: ": ["CC3000 MAC address", null]},
-        {" MQTT Password backed up?": ["Open Sensors .io password", backedUpOrNot]},
-        {"    CO Sensitivity [nA/ppm]: ": ["CO Sensitivity", null]},
-        {"    CO Offset [V]: ": ["CO Sensor Zero Value", null]},
-        {"    NO2 Sensitivity [nA/ppm]: ": ["NO2 Sensitivity", null]},
-        {"    NO2 Offset [V]: ": ["NO2 Sensor Zero Value", null]},
-        {"    O3 Sensitivity [nA/ppm]: ": ["O3 Sensitivity", null]},
-        {"    O3 Offset [V]: ": ["O3 Sensor Zero Value", null]},
-        {"    SO2 Sensitivity [nA/ppm]: ": ["SO2 Sensitivity", null]},
-        {"    SO2 Offset [V]: ": ["SO2 Sensor Zero Value", null]},
-        {"    Temperature Reporting Offset [degC]: ": ["Temperature Offset", null]},
-        {"    Humidity Reporting Offset [%]: ": ["Humidity Offset", null]},
-        {"    MQTT Client ID: ": ["OpenSensors Username", null]}
+];
 
-    ];
 
+var openPortsDataLineProcessing = function(args){ // what to do whenever you get a data line [collect the table data into global object]
+    var data = args["data"];
+    var obj = args["obj"];
+    var portName = args["portName"];
+    var parts = data.trim().split("Egg Serial Number: ");
+    if(parts.length == 2){
+        serialNumber = parts[1];
+        if(obj) {
+            obj.serialNumber = serialNumber;
+            allPorts.push(obj);
+        }
+        dataRecordBySerialNumber[serialNumber] = {};
+        dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
+        dataRecordBySerialNumber[serialNumber]["comName"] = portName;
+    }
+
+    parts = data.split("   Firmware Version ");
+    if(parts.length > 1){
+        firmwareVersion = stripTrailingBarAndTrim(parts[1]);
+    }
+    else{
+        var found = false;
+        for(var entry in fieldStringSplitMap){
+            for(var key in fieldStringSplitMap[entry]){ // there will only be one
+                parts = data.split(key);
+                if(parts.length > 1){
+                    found = true;
+                    var arg = null;
+                    if(parts[0].length > 0){
+                        if(fieldStringSplitMap[entry][key][1] == null){
+                            arg = parts[0].trim();
+                        }
+                        else{
+                            arg = fieldStringSplitMap[entry][key][1](parts[0])
+                        }
+                    }
+                    else{
+                        if(fieldStringSplitMap[entry][key][1] == null){
+                            arg = parts[1].trim();
+                        }
+                        else{
+                            arg = fieldStringSplitMap[entry][key][1](parts[1])
+                        }
+                    }
+
+                    // this whole guard is to stop the application from crashing
+                    // because of hitting refresh while the page is still loading
+                    // and server processing is still ongoing, causing global variable mayhem
+                    if( serialNumber
+                        && entry
+                        && key
+                        && dataRecordBySerialNumber
+                        && dataRecordBySerialNumber[serialNumber]
+                        && fieldStringSplitMap
+                        && fieldStringSplitMap[entry]
+                        && fieldStringSplitMap[entry][key]
+                        && fieldStringSplitMap[entry][key][0])
+                    {
+                        dataRecordBySerialNumber[serialNumber][fieldStringSplitMap[entry][key][0]] = [arg];
+
+                    }
+                    else{
+                        // well that wasn't good...
+                        //throw new Error("Please restart the app and be more patient while it initializes.");
+                        console.log("AAAAAAAAAAAAAAAAAAAAAAAARGGGHGHHH!");
+                    }
+                    break;
+                }
+            }
+
+            if(found){
+                break;
+            }
+        }
+    }
+}
+
+function openSerialPort(portName, obj, parentCallback){
     var sp = new SerialPort(portName, {
         baudrate: 115200,
         parser: serialPort.parsers.readline("\n")
@@ -138,85 +240,15 @@ function openSerialPort(portName, obj, callback){
     sendCommandList(
          sp, // the port to target
          null, // on serial port open [null because we don't need to hang on to the handles]
-         21, // number of lines before starting to issue commands
+         22, // number of lines before starting to issue commands
          ["aqe"], // the list of commands
-         0, // how long to wait between sending each command
+         1000, // how long to wait between sending each command
          80, // the number of lines to wait before closing the port
          0, // the time to wait after that many lines before closing the port
-         callback, // the function to call after closing the port  [return from http request after closing the port]
-         function(data){ // what to do whenever you get a data line [collect the table data into global object]
-             var parts = data.trim().split("Egg Serial Number: ");
-             if(parts.length == 2){
-                 serialNumber = parts[1];
-                 if(obj) {
-                     obj.serialNumber = serialNumber;
-                     allPorts.push(obj);
-                 }
-                 dataRecordBySerialNumber[serialNumber] = {};
-                 dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
-                 dataRecordBySerialNumber[serialNumber]["comName"] = portName;
-             }
-
-             parts = data.split("   Firmware Version ");
-             if(parts.length > 1){
-                 firmwareVersion = stripTrailingBarAndTrim(parts[1]);
-             }
-             else{
-                 var found = false;
-                 for(var entry in fieldStringSplitMap){
-                     for(var key in fieldStringSplitMap[entry]){ // there will only be one
-                         parts = data.split(key);
-                         if(parts.length > 1){
-                             found = true;
-                             var arg = null;
-                             if(parts[0].length > 0){
-                                 if(fieldStringSplitMap[entry][key][1] == null){
-                                     arg = parts[0].trim();
-                                 }
-                                 else{
-                                     arg = fieldStringSplitMap[entry][key][1](parts[0])
-                                 }
-                             }
-                             else{
-                                 if(fieldStringSplitMap[entry][key][1] == null){
-                                     arg = parts[1].trim();
-                                 }
-                                 else{
-                                     arg = fieldStringSplitMap[entry][key][1](parts[1])
-                                 }
-                             }
-
-                             // this whole guard is to stop the application from crashing
-                             // because of hitting refresh while the page is still loading
-                             // and server processing is still ongoing, causing global variable mayhem
-                             if( serialNumber
-                                 && entry
-                                 && key
-                                 && dataRecordBySerialNumber
-                                 && dataRecordBySerialNumber[serialNumber]
-                                 && fieldStringSplitMap
-                                 && fieldStringSplitMap[entry]
-                                 && fieldStringSplitMap[entry][key]
-                                 && fieldStringSplitMap[entry][key][0])
-                             {
-                                 dataRecordBySerialNumber[serialNumber][fieldStringSplitMap[entry][key][0]] = [arg];
-
-                             }
-                             else{
-                                 // well that wasn't good...
-                                 //throw new Error("Please restart the app and be more patient while it initializes.");
-                             }
-                             break;
-                         }
-                     }
-
-                     if(found){
-                         break;
-                     }
-                 }
-             }
-         },
-         null // function to call after all commands have been sent [null because we're going to close the port after]
+         parentCallback, // the function to call after closing the port  [return from http request after closing the port]
+         openPortsDataLineProcessing,
+         null, // function to call after all commands have been sent [null because we're going to close the port after]
+         {"obj": obj, "portName": portName}
     );
 }
 
@@ -233,7 +265,7 @@ function commitValuesToSerialPort(objData, portName, callback){
     sendCommandList(
         sp, // the port to target
         null, // on serial port open [null because we don't need to hang on to the handles]
-        21, // number of lines before starting to issue commands
+        22, // number of lines before starting to issue commands
         [
             "aqe",
             "no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])),
@@ -244,13 +276,34 @@ function commitValuesToSerialPort(objData, portName, callback){
             "backup all",
             "restore defaults"
         ], // the list of commands
-        500, // how long to wait between sending each command
+        1000, // how long to wait between sending each command
         100, // the number of lines to wait before closing the port
         5000, // the time to wait after that many lines before closing the port
         callback, // the function to call after closing the port
         null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
         null // function to call after all commands have been sent [null because we are just going to close the port when done]
     );
+}
+
+var calibrationDataLineProcessing = function(args) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
+    var data = args["data"];
+    // if the line starts with "csv:" pull the current values out and store them in a global
+    if (data.trim().slice(0, 4) == "csv:") {
+        parts = data.trim().slice(4).split(",");
+        if(parts.length > 2 && isNumeric(parts[1])){
+            if(!currentCalibrationValues[port.serialNumber]) {
+                currentCalibrationValues[port.serialNumber] = {};
+            }
+            currentCalibrationValues[port.serialNumber]["Temperature"] = parseFloat(parts[1]);
+        }
+
+        if(parts.length > 3 && isNumeric(parts[2])){
+            if(!currentCalibrationValues[port.serialNumber]) {
+                currentCalibrationValues[port.serialNumber] = {};
+            }
+            currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[2]);
+        }
+    }
 }
 
 router.get('/startcalibration', function(req, res, next) {
@@ -286,34 +339,14 @@ router.get('/startcalibration', function(req, res, next) {
 
         sendCommandList(
             sp, // the port to target
-            function(sp){  // on serial port open, collect the handles so we can close them later
-                openHandles.push(sp);
-            },
-            21, // number of lines before starting to issue commands
+            null,
+            22, // number of lines before starting to issue commands
             commands, // the list of commands
-            500, // how long to wait between sending each command
+            1000, // how long to wait between sending each command
             null, // the number of lines to wait before closing the port [null because we aren't going to close the port at all here]
             null, // the time to wait after that many lines before closing the port [null because we aren't going to close the port at all here]
             null, // the function to call after closing the port [null because we aren't going to close the port at all here]
-            function(data) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
-                // if the line starts with "csv:" pull the current values out and store them in a global
-                if (data.trim().slice(0, 4) == "csv:") {
-                    parts = data.trim().slice(4).split(",");
-                    if(parts.length > 2 && isNumeric(parts[1])){
-                        if(!currentCalibrationValues[port.serialNumber]) {
-                            currentCalibrationValues[port.serialNumber] = {};
-                        }
-                        currentCalibrationValues[port.serialNumber]["Temperature"] = parseFloat(parts[1]);
-                    }
-
-                    if(parts.length > 3 && isNumeric(parts[2])){
-                        if(!currentCalibrationValues[port.serialNumber]) {
-                            currentCalibrationValues[port.serialNumber] = {};
-                        }
-                        currentCalibrationValues[port.serialNumber]["Humidity"] = parseFloat(parts[2]);
-                    }
-                }
-            },
+            calibrationDataLineProcessing,
             callback // function to call after all commands have been sent, [return from http response here because we aren't going to close the port here]
         );
     },
@@ -321,6 +354,64 @@ router.get('/startcalibration', function(req, res, next) {
         res.json(allPorts);
     });
 });
+
+var wifiConnectDataLineProcessing = function(args) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
+    var data = args["data"];
+    if(!currentNetworkValues[port.serialNumber]) {
+        currentNetworkValues[port.serialNumber] = {};
+    }
+
+    if(!data){
+        return;
+    }
+
+    data = data.trim();
+
+    if(data.indexOf('Beginning Network Scan...') > -1){
+        currentNetworkValues[port.serialNumber]["Status"] = "Scanning";
+    }
+    else if(data.indexOf('Network Scan found') > -1){
+        currentNetworkValues[port.serialNumber]["Status"] = "Scan found " + data.slice("Info: Network Scan found ".length);
+    }
+    else if(data.indexOf('Found Access Point') > -1){
+        var rssi = data.match('RSSI = ([0-9]+)');
+        if(rssi) {
+            currentNetworkValues[port.serialNumber]["Status"] = "Network found - RSSI " + rssi[1];
+        }
+        else{
+            currentNetworkValues[port.serialNumber]["Status"] = "Network found - no RSSI";
+        }
+    }
+    else if(data.indexOf('Connecting to Access Point with SSID') > -1){
+        var ok = data.match(/OK\.$/);
+        if(ok){
+            currentNetworkValues[port.serialNumber]["Status"] = "Connected";
+        }
+        else{
+            currentNetworkValues[port.serialNumber]["Status"] = "Connect Failed";
+        }
+    }
+    else if(data.indexOf('Request DHCP...') > -1){
+        var ok = data.match(/OK$/);
+        if(ok){
+            currentNetworkValues[port.serialNumber]["Status"] = "Got DHCP";
+        }
+        else{
+            currentNetworkValues[port.serialNumber]["Status"] = "DHCP Failed";
+        }
+    }
+    else if(data.indexOf('IP Addr:') > -1){
+        currentNetworkValues[port.serialNumber]["Status"] = "IP: " +data.slice("Info: IP Addr: ".length);
+    }
+    else if(data.indexOf('MQTT Broker') > -1){
+        if(data.indexOf('OK') > -1){
+            currentNetworkValues[port.serialNumber]["Status"] = "Connected to MQTT";
+        }
+        else{
+            currentNetworkValues[port.serialNumber]["Status"] = "MQTT Failed";
+        }
+    }
+}
 
 router.get('/startwificonnect', function(req, res, next) {
     async.forEach(allPorts, function(port, callback) {
@@ -337,71 +428,14 @@ router.get('/startwificonnect', function(req, res, next) {
 
             sendCommandList(
                 sp, // the port to target
-                function(sp){  // on serial port open, collect the handles so we can close them later
-                    openHandles.push(sp);
-                },
-                21, // number of lines before starting to issue commands
+                null,
+                22, // number of lines before starting to issue commands
                 commands, // the list of commands
-                500, // how long to wait between sending each command
+                1000, // how long to wait between sending each command
                 null, // the number of lines to wait before closing the port [null because we aren't going to close the port at all here]
                 null, // the time to wait after that many lines before closing the port [null because we aren't going to close the port at all here]
                 null, // the function to call after closing the port [null because we aren't going to close the port at all here]
-                function(data) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
-                    if(!currentNetworkValues[port.serialNumber]) {
-                        currentNetworkValues[port.serialNumber] = {};
-                    }
-
-                    if(!data){
-                        return;
-                    }
-
-                    data = data.trim();
-
-                    if(data.indexOf('Beginning Network Scan...') > -1){
-                        currentNetworkValues[port.serialNumber]["Status"] = "Scanning";
-                    }
-                    else if(data.indexOf('Network Scan found') > -1){
-                        currentNetworkValues[port.serialNumber]["Status"] = "Scan found " + data.slice("Info: Network Scan found ".length);
-                    }
-                    else if(data.indexOf('Found Access Point') > -1){
-                        var rssi = data.match('RSSI = ([0-9]+)');
-                        if(rssi) {
-                            currentNetworkValues[port.serialNumber]["Status"] = "Network found - RSSI " + rssi[1];
-                        }
-                        else{
-                            currentNetworkValues[port.serialNumber]["Status"] = "Network found - no RSSI";
-                        }
-                    }
-                    else if(data.indexOf('Connecting to Access Point with SSID') > -1){
-                        var ok = data.match(/OK\.$/);
-                        if(ok){
-                            currentNetworkValues[port.serialNumber]["Status"] = "Connected";
-                        }
-                        else{
-                            currentNetworkValues[port.serialNumber]["Status"] = "Connect Failed";
-                        }
-                    }
-                    else if(data.indexOf('Request DHCP...') > -1){
-                        var ok = data.match(/OK$/);
-                        if(ok){
-                            currentNetworkValues[port.serialNumber]["Status"] = "Got DHCP";
-                        }
-                        else{
-                            currentNetworkValues[port.serialNumber]["Status"] = "DHCP Failed";
-                        }
-                    }
-                    else if(data.indexOf('IP Addr:') > -1){
-                        currentNetworkValues[port.serialNumber]["Status"] = "IP: " +data.slice("Info: IP Addr: ".length);
-                    }
-                    else if(data.indexOf('MQTT Broker') > -1){
-                        if(data.indexOf('OK') > -1){
-                            currentNetworkValues[port.serialNumber]["Status"] = "Connected to MQTT";
-                        }
-                        else{
-                            currentNetworkValues[port.serialNumber]["Status"] = "MQTT Failed";
-                        }
-                    }
-                },
+                wifiConnectDataLineProcessing,
                 callback // function to call after all commands have been sent, [return from http response here because we aren't going to close the port here]
             );
         },
@@ -464,7 +498,7 @@ router.post('/applycalibrations', function(req, res, next) {
             sendCommandList(
                 sp, // the port to target
                 null, // on serial port open, [null because we are going to the close the port before we're done]
-                21, // number of lines before starting to issue commands
+                22, // number of lines before starting to issue commands
                 [
                     "aqe",
                     "temp_off " + temp_off,
@@ -472,7 +506,7 @@ router.post('/applycalibrations', function(req, res, next) {
                     "backup all",
                     "restore defaults"
                 ], // the list of commands
-                500, // how long to wait between sending each command
+                1000, // how long to wait between sending each command
                 100, // the number of lines to wait before closing the port
                 5000, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
@@ -515,14 +549,14 @@ router.post('/applynetworksettings', function(req, res, next) {
             sendCommandList(
                 sp, // the port to target
                 null, // on serial port open, [null because we are going to the close the port before we're done]
-                21, // number of lines before starting to issue commands
+                22, // number of lines before starting to issue commands
                 [
                     "aqe",
                     "restore defaults",
                     "ssid " + ssid,
                     "pwd " + password,
                 ], // the list of commands
-                500, // how long to wait between sending each command
+                1000, // how long to wait between sending each command
                 100, // the number of lines to wait before closing the port
                 5000, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
@@ -548,15 +582,16 @@ router.post('/clearwifisettings', function(req, res, next) {
                 baudrate: 115200,
                 parser: serialPort.parsers.readline("\n")
             });
+
             sendCommandList(
                 sp, // the port to target
                 null, // on serial port open, [null because we are going to the close the port before we're done]
-                21, // number of lines before starting to issue commands
+                22, // number of lines before starting to issue commands
                 [
                     "aqe",
                     "restore defaults",
                 ], // the list of commands
-                500, // how long to wait between sending each command
+                1000, // how long to wait between sending each command
                 100, // the number of lines to wait before closing the port
                 5000, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
@@ -579,12 +614,13 @@ router.post('/commit/:serialNumber', function(req, res, next) {
             found_it = true;
             console.log(req.body);
 
-            waterfall([
+            async.series([
                 function (callback) {
                     commitValuesToSerialPort(req.body, allPorts[entry].comName, callback);
                 }
             ],
-            function (err, result) {
+            function(err) {
+                if (err) return next(err);
                 res.json({"status": "OK"});
             });
             break;
@@ -608,33 +644,45 @@ router.get('/', function(req, res, next) {
 
     for(var i = 0; i < openHandles.length; ii++){
         if(openHandles[i].isOpen()){
+            removeSerialPortHandleByPath(openHandles[i].path);
             openHandles[i].close();
         }
     }
     openHandles = [];
 
-    waterfall(
+    var listedPorts = [];
+
+    async.series(
         [
             function(callback){
                 serialPort.list(function (err, ports) {
-                    async.forEach(ports, function(port, callback) {
+                    listedPorts = ports;
+                    callback();
+                });
+            },
+            function(callback){
+                async.forEach(listedPorts, function(port, subcallback) {
                         var obj = {};
                         obj.comName = port.comName;
                         obj.pnpId = port.pnpId;
                         obj.manufacturer = port.manufacturer;
                         if(obj.manufacturer == "FTDI") {
-                            openSerialPort(port.comName, obj, callback)
+                            openSerialPort(port.comName, obj, subcallback)
+                        }
+                        else{
+                            console.log("Encountered non-FTDI serial port");
+                            subcallback();
                         }
                     },
                     function(err) {
-                        callback(null);
+                        callback(err);
                     });
-                });
             }
         ],
-        function(err, result){
-            res.json(allPorts);
+        function(err){
             guardListPorts = false;
+            if(err) return next(err);
+            res.json(allPorts);
         }
     );
 });
