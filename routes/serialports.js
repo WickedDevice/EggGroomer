@@ -48,7 +48,7 @@ var removeSerialPortHandleByPath = function(path){
 // subsequentProcessingFunction can be null if there's nothing to do on each line received
 // functionToCallAfterAllCommandsSent can be null if there's nothing to do right after sending all the commands
 function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially, commandList, timeBetweenCommands,
-                         numLinesToWaitForBeforeClosing, timeToWaitBeforeClosing, functionToCallAfterClosing,
+                         substringToWaitForBeforeClosing, timeToWaitBeforeClosing, functionToCallAfterClosing,
                          subsequentProcessingFunction, functionToCallAfterAllCommandsSent, subsequentProcessingFunctionArgs){
 
     var commandFuncs = [];
@@ -102,18 +102,10 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
             }
 
 
-            if(lineCount !== null && allCommandsSent && !alreadySetTimeout && lineCount >= numLinesToWaitForBeforeClosing){
+            if(!alreadySetTimeout && (data.indexOf(substringToWaitForBeforeClosing) != -1)){
                 alreadySetTimeout = true;
                 setTimeout(function(){
-                    var path = sp.path;
-                    if(sp.isOpen()) {
-                        console.log("Flushing and closing " + path)
-                        sp.flush();
-                        removeSerialPortHandleByPath(path);
-                        sp.close();
-                    }
-
-                    console.log("serial port closed.");
+                    console.log("serial port ready to be closed.");
                     if(functionToCallAfterClosing){
                         functionToCallAfterClosing(null);
                     }
@@ -149,12 +141,32 @@ var fieldStringSplitMap = [
 
 ];
 
+function getSerialNumberForPort(portName){
+    for(var i = 0; i < allPorts.length; i++){
+        if(allPorts[i].comName == portName){
+            return allPorts[i]["serialNumber"];
+        }
+    }
+    return null;
+}
+
+var portToFirmwareVersionMap = {};
+
+function setFirmwareVersionForPort(portName, firmwareVersion){
+    portToFirmwareVersionMap[portName] = firmwareVersion;
+    return;
+}
+
+function getFirmwareVersionForPort(portName){
+    return portToFirmwareVersionMap[portName];
+}
 
 var openPortsDataLineProcessing = function(args){ // what to do whenever you get a data line [collect the table data into global object]
     var data = args["data"];
     var obj = args["obj"];
     var portName = args["portName"];
     var parts = data.trim().split("Egg Serial Number: ");
+    var serialNumber = getSerialNumberForPort(portName);
     if(parts.length == 2){
         serialNumber = parts[1];
         if(obj) {
@@ -162,13 +174,14 @@ var openPortsDataLineProcessing = function(args){ // what to do whenever you get
             allPorts.push(obj);
         }
         dataRecordBySerialNumber[serialNumber] = {};
-        dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [firmwareVersion];
+        dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [getFirmwareVersionForPort(portName)];
         dataRecordBySerialNumber[serialNumber]["comName"] = portName;
     }
 
     parts = data.split("   Firmware Version ");
     if(parts.length > 1){
-        firmwareVersion = stripTrailingBarAndTrim(parts[1]);
+        var firmwareVersion = stripTrailingBarAndTrim(parts[1]);
+        setFirmwareVersionForPort(portName, firmwareVersion)
     }
     else{
         var found = false;
@@ -236,53 +249,71 @@ function openSerialPort(portName, obj, parentCallback){
     var lineCount = 0;
     var serialNumber = null;
     var firmwareVersion = null;
+    async.series([
+        function(callback) {
+            sendCommandList(
+                sp, // the port to target
+                null, // on serial port open [null because we don't need to hang on to the handles]
+                22, // number of lines before starting to issue commands
+                ["aqe"], // the list of commands
+                1000, // how long to wait between sending each command
+                '@===', // close if you receive a line that contains this string
+                0, // the time to wait after that many lines before closing the port
+                callback, // the function to call after closing the port  [return from http request after closing the port]
+                openPortsDataLineProcessing,
+                null, // function to call after all commands have been sent [null because we're going to close the port after]
+                {"obj": obj, "portName": portName}
+            )
+        }
+    ],
+    function(err){
+        parentCallback(err);
+    });
 
-    sendCommandList(
-         sp, // the port to target
-         null, // on serial port open [null because we don't need to hang on to the handles]
-         22, // number of lines before starting to issue commands
-         ["aqe"], // the list of commands
-         1000, // how long to wait between sending each command
-         80, // the number of lines to wait before closing the port
-         0, // the time to wait after that many lines before closing the port
-         parentCallback, // the function to call after closing the port  [return from http request after closing the port]
-         openPortsDataLineProcessing,
-         null, // function to call after all commands have been sent [null because we're going to close the port after]
-         {"obj": obj, "portName": portName}
-    );
 }
 
 router.get('/data/:serialNumber', function(req, res, next) {
     res.json(dataRecordBySerialNumber[req.params["serialNumber"]]);
 });
 
-function commitValuesToSerialPort(objData, portName, callback){
+function commitValuesToSerialPort(objData, portName, parentCallback){
     var sp = new SerialPort(portName, {
         baudrate: 115200,
         parser: serialPort.parsers.readline("\n")
     });
 
-    sendCommandList(
-        sp, // the port to target
-        null, // on serial port open [null because we don't need to hang on to the handles]
-        22, // number of lines before starting to issue commands
-        [
-            "aqe",
-            "no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])),
-            "no2_off " + objData["no2-offset"].trim(),
-            "co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])),
-            "co_off " + objData["co-offset"].trim(),
-            "mqttpwd " + objData["mqtt-password"].trim(),
-            "backup all",
-            "restore defaults"
-        ], // the list of commands
-        1000, // how long to wait between sending each command
-        100, // the number of lines to wait before closing the port
-        5000, // the time to wait after that many lines before closing the port
-        callback, // the function to call after closing the port
-        null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
-        null // function to call after all commands have been sent [null because we are just going to close the port when done]
-    );
+    async.series([
+        function(callback) {
+            sendCommandList(
+                sp, // the port to target
+                null, // on serial port open [null because we don't need to hang on to the handles]
+                22, // number of lines before starting to issue commands
+                [
+                    "aqe",
+                    "no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])),
+                    "no2_off " + objData["no2-offset"].trim(),
+                    "co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])),
+                    "co_off " + objData["co-offset"].trim(),
+                    "mqttpwd " + objData["mqtt-password"].trim(),
+                    "backup all",
+                    "restore defaults"
+                ], // the list of commands
+                1000, // how long to wait between sending each command
+                'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                500, // the time to wait after that many lines before closing the port
+                callback, // the function to call after closing the port
+                null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
+                null // function to call after all commands have been sent [null because we are just going to close the port when done]
+            );
+        },
+        function(callback) {
+            disconnectAllOpenSerialPorts(callback);
+        }
+    ],
+    function(err){
+       parentCallback(err);
+    });
+
 }
 
 var calibrationDataLineProcessing = function(args) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
@@ -351,6 +382,7 @@ router.get('/startcalibration', function(req, res, next) {
         );
     },
     function(err){
+        // intentionally do not call disconnectAllOpenSerialPorts();
         res.json(allPorts);
     });
 });
@@ -440,23 +472,32 @@ router.get('/startwificonnect', function(req, res, next) {
             );
         },
         function(err){
+            // intentionally do not call disconnectAllOpenSerialPorts();
             res.json(allPorts);
         });
 });
 
-router.get('/disconnectAll', function(req, res, next) {
+var disconnectAllOpenSerialPorts = function(callbackOnAllClosed){
     async.forEach(openHandles, function(sp, callback){
-        if(sp && sp.isOpen()) {
-            sp.close(function () {
-                console.log("close");
-                callback(null);
-            });
-        }
-    },
-    function(err) {
-        openHandles = [];
+            if(sp && sp.isOpen()) {
+                sp.close(function () {
+                    console.log("close");
+                    callback(null);
+                });
+            }
+        },
+        function(err) {
+            openHandles = [];
+            if(callbackOnAllClosed) {
+                callbackOnAllClosed();
+            }
+        });
+}
+
+router.get('/disconnectAll', function(req, res, next) {
+    disconnectAllOpenSerialPorts(function(){
         res.json({status: "OK"});
-    });
+    })
 });
 
 // this will get polled periodically to update the front end
@@ -507,14 +548,15 @@ router.post('/applycalibrations', function(req, res, next) {
                     "restore defaults"
                 ], // the list of commands
                 1000, // how long to wait between sending each command
-                100, // the number of lines to wait before closing the port
-                5000, // the time to wait after that many lines before closing the port
+                'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                500, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
                 null, // what to do whenever you get a data line, [null because we are not processing Egg output]
                 null // function to call after all commands have been sent [null because we are going to callback when we close the port]
             );
         }
     },function(err){
+        disconnectAllOpenSerialPorts();
         res.json(allPorts);
     });
 
@@ -555,16 +597,18 @@ router.post('/applynetworksettings', function(req, res, next) {
                     "restore defaults",
                     "ssid " + ssid,
                     "pwd " + password,
+                    "exit"
                 ], // the list of commands
                 1000, // how long to wait between sending each command
-                100, // the number of lines to wait before closing the port
-                5000, // the time to wait after that many lines before closing the port
+                '-~=* In OPERATIONAL Mode *=~-', // close if you receive a line that contains this string
+                500, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
                 null, // what to do whenever you get a data line, [null because we are not processing Egg output]
                 null // function to call after all commands have been sent [null because we are going to callback when we close the port]
             );
         }
     },function(err){
+        disconnectAllOpenSerialPorts();
         res.json(allPorts);
     });
 
@@ -592,14 +636,15 @@ router.post('/clearwifisettings', function(req, res, next) {
                     "restore defaults",
                 ], // the list of commands
                 1000, // how long to wait between sending each command
-                100, // the number of lines to wait before closing the port
-                5000, // the time to wait after that many lines before closing the port
+                'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                500, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
                 null, // what to do whenever you get a data line, [null because we are not processing Egg output]
                 null // function to call after all commands have been sent [null because we are going to callback when we close the port]
             );
         }
     },function(err){
+        disconnectAllOpenSerialPorts();
         res.json(allPorts);
     });
 
@@ -661,7 +706,7 @@ router.get('/', function(req, res, next) {
                 });
             },
             function(callback){
-                async.forEach(listedPorts, function(port, subcallback) {
+                async.forEach(listedPorts, function(port, subcallback){
                         var obj = {};
                         obj.comName = port.comName;
                         obj.pnpId = port.pnpId;
@@ -680,6 +725,7 @@ router.get('/', function(req, res, next) {
             }
         ],
         function(err){
+            disconnectAllOpenSerialPorts();
             guardListPorts = false;
             if(err) return next(err);
             res.json(allPorts);
