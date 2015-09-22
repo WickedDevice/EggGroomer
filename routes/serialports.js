@@ -55,15 +55,16 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
     commandList.forEach( function(cmd){
         commandFuncs.push( function(callback){
                 setTimeout(function(){
+                    callback();
                     if(sp.isOpen()){
                         console.log("Issuing command '" + cmd + "'");
                         sp.write(cmd + "\r");
                         sp.drain();
+                        sp.flush();
                     }
                     else{
                         console.log("Port was closed, preventing command '" + cmd + "' from being issued");
                     }
-                callback();
                 }, timeBetweenCommands);
             }
         );
@@ -93,11 +94,12 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
                 async.series(
                     commandFuncs,
                     function(err){
-                        if(err) return next(err);
-
-                        if(functionToCallAfterAllCommandsSent != null){
+                        console.log("All commands sent!")
+                        if(functionToCallAfterAllCommandsSent){
                             functionToCallAfterAllCommandsSent(err);
                         }
+
+                        if(err) return next(err);
                     });
             }
 
@@ -389,8 +391,10 @@ router.get('/startcalibration', function(req, res, next) {
 
 var wifiConnectDataLineProcessing = function(args) { // what to do whenever you get a data line, [parse the csv lines and keep the latest values around in a global]
     var data = args["data"];
-    if(!currentNetworkValues[port.serialNumber]) {
-        currentNetworkValues[port.serialNumber] = {};
+    var serialNumber = args["serialNumber"];
+
+    if(!currentNetworkValues[serialNumber]) {
+        currentNetworkValues[serialNumber] = {};
     }
 
     if(!data){
@@ -400,53 +404,55 @@ var wifiConnectDataLineProcessing = function(args) { // what to do whenever you 
     data = data.trim();
 
     if(data.indexOf('Beginning Network Scan...') > -1){
-        currentNetworkValues[port.serialNumber]["Status"] = "Scanning";
+        currentNetworkValues[serialNumber]["Status"] = "Scanning";
     }
     else if(data.indexOf('Network Scan found') > -1){
-        currentNetworkValues[port.serialNumber]["Status"] = "Scan found " + data.slice("Info: Network Scan found ".length);
+        currentNetworkValues[serialNumber]["Status"] = "Scan found " + data.slice("Info: Network Scan found ".length);
     }
     else if(data.indexOf('Found Access Point') > -1){
         var rssi = data.match('RSSI = ([0-9]+)');
         if(rssi) {
-            currentNetworkValues[port.serialNumber]["Status"] = "Network found - RSSI " + rssi[1];
+            currentNetworkValues[serialNumber]["Status"] = "Network found - RSSI " + rssi[1];
         }
         else{
-            currentNetworkValues[port.serialNumber]["Status"] = "Network found - no RSSI";
+            currentNetworkValues[serialNumber]["Status"] = "Network found - no RSSI";
         }
     }
     else if(data.indexOf('Connecting to Access Point with SSID') > -1){
         var ok = data.match(/OK\.$/);
         if(ok){
-            currentNetworkValues[port.serialNumber]["Status"] = "Connected";
+            currentNetworkValues[serialNumber]["Status"] = "Connected";
         }
         else{
-            currentNetworkValues[port.serialNumber]["Status"] = "Connect Failed";
+            currentNetworkValues[serialNumber]["Status"] = "Connect Failed";
         }
     }
     else if(data.indexOf('Request DHCP...') > -1){
         var ok = data.match(/OK$/);
         if(ok){
-            currentNetworkValues[port.serialNumber]["Status"] = "Got DHCP";
+            currentNetworkValues[serialNumber]["Status"] = "Got DHCP";
         }
         else{
-            currentNetworkValues[port.serialNumber]["Status"] = "DHCP Failed";
+            currentNetworkValues[serialNumber]["Status"] = "DHCP Failed";
         }
     }
     else if(data.indexOf('IP Addr:') > -1){
-        currentNetworkValues[port.serialNumber]["Status"] = "IP: " +data.slice("Info: IP Addr: ".length);
+        currentNetworkValues[serialNumber]["Status"] = "IP: " +data.slice("Info: IP Addr: ".length);
     }
     else if(data.indexOf('MQTT Broker') > -1){
         if(data.indexOf('OK') > -1){
-            currentNetworkValues[port.serialNumber]["Status"] = "Connected to MQTT";
+            currentNetworkValues[serialNumber]["Status"] = "Connected to MQTT";
         }
         else{
-            currentNetworkValues[port.serialNumber]["Status"] = "MQTT Failed";
+            currentNetworkValues[serialNumber]["Status"] = "MQTT Failed";
         }
     }
 }
 
 router.get('/startwificonnect', function(req, res, next) {
     async.forEach(allPorts, function(port, callback) {
+            var serialNumber = port.serialNumber;
+
             var sp = new SerialPort(port.comName, {
                 baudrate: 115200,
                 parser: serialPort.parsers.readline("\n")
@@ -552,7 +558,8 @@ router.post('/applycalibrations', function(req, res, next) {
                 500, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
                 null, // what to do whenever you get a data line, [null because we are not processing Egg output]
-                null // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                null, // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                {"serialNumber" : serialNumber}
             );
         }
     },function(err){
@@ -604,7 +611,8 @@ router.post('/applynetworksettings', function(req, res, next) {
                 500, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
                 null, // what to do whenever you get a data line, [null because we are not processing Egg output]
-                null // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                null, // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                {"serialNumber" : serialNumber}
             );
         }
     },function(err){
@@ -640,7 +648,8 @@ router.post('/clearwifisettings', function(req, res, next) {
                 500, // the time to wait after that many lines before closing the port
                 callback, // the function to call after closing the port
                 null, // what to do whenever you get a data line, [null because we are not processing Egg output]
-                null // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                null, // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                {"serialNumber": serialNumber}
             );
         }
     },function(err){
