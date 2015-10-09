@@ -90,7 +90,13 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
         sp.on('data', function (data) {
             console.log(sp.path+ ' line ' + lineCount + ': ' + data);
             lineCount++;
-            if (lineCount == numLinesToWaitForInitially) {
+
+            var start_sending_now = false;
+            if(data.indexOf("OPERATIONAL mode automatically begins after 12 secs of no input.") >= 0){
+                start_sending_now = true;
+            }
+
+            if ((lineCount == numLinesToWaitForInitially) || start_sending_now) {
                 async.series(
                     commandFuncs,
                     function(err){
@@ -286,27 +292,77 @@ function commitValuesToSerialPort(objData, portName, parentCallback){
 
     async.series([
         function(callback) {
-            sendCommandList(
-                sp, // the port to target
-                null, // on serial port open [null because we don't need to hang on to the handles]
-                22, // number of lines before starting to issue commands
-                [
-                    "aqe",
-                    "no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])),
-                    "no2_off " + objData["no2-offset"].trim(),
-                    "co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])),
-                    "co_off " + objData["co-offset"].trim(),
-                    "mqttpwd " + objData["mqtt-password"].trim(),
-                    "backup all",
-                    "restore defaults"
-                ], // the list of commands
-                1000, // how long to wait between sending each command
-                'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
-                500, // the time to wait after that many lines before closing the port
-                callback, // the function to call after closing the port
-                null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
-                null // function to call after all commands have been sent [null because we are just going to close the port when done]
-            );
+            if(objData["no2-offset"].trim() != ""){
+                sendCommandList(
+                    sp, // the port to target
+                    null, // on serial port open [null because we don't need to hang on to the handles]
+                    22, // number of lines before starting to issue commands
+                    [
+                        "aqe",
+                        "no2_sen " + Math.abs(parseFloat(objData["no2-sensitivity"])),
+                        "no2_off " + objData["no2-offset"].trim(),
+                        "co_sen " + Math.abs(parseFloat(objData["co-sensitivity"])),
+                        "co_off " + objData["co-offset"].trim(),
+                        "temp_off " + objData["temperature-offset"].trim(),
+                        "hum_off " + objData["humidity-offset"].trim(),
+                        "mqttpwd " + objData["mqtt-password"].trim(),
+                        "backup all",
+                        "restore defaults"
+                    ], // the list of commands
+                    1000, // how long to wait between sending each command
+                    'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                    500, // the time to wait after that many lines before closing the port
+                    callback, // the function to call after closing the port
+                    null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
+                    null // function to call after all commands have been sent [null because we are just going to close the port when done]
+                );
+            }
+            else if(objData["so2-offset"].trim() != ""){
+                sendCommandList(
+                    sp, // the port to target
+                    null, // on serial port open [null because we don't need to hang on to the handles]
+                    22, // number of lines before starting to issue commands
+                    [
+                        "aqe",
+                        "so2_sen " + Math.abs(parseFloat(objData["so2-sensitivity"])),
+                        "so2_off " + objData["so2-offset"].trim(),
+                        "o3_sen " + Math.abs(parseFloat(objData["o3-sensitivity"])),
+                        "o3_off " + objData["o3-offset"].trim(),
+                        "temp_off " + objData["temperature-offset"].trim(),
+                        "hum_off " + objData["humidity-offset"].trim(),
+                        "mqttpwd " + objData["mqtt-password"].trim(),
+                        "backup all",
+                        "restore defaults"
+                    ], // the list of commands
+                    1000, // how long to wait between sending each command
+                    'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                    500, // the time to wait after that many lines before closing the port
+                    callback, // the function to call after closing the port
+                    null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
+                    null // function to call after all commands have been sent [null because we are just going to close the port when done]
+                );
+            }
+            else{
+                sendCommandList(
+                    sp, // the port to target
+                    null, // on serial port open [null because we don't need to hang on to the handles]
+                    22, // number of lines before starting to issue commands
+                    [
+                        "aqe",
+                        "temp_off " + objData["temperature-offset"].trim(),
+                        "hum_off " + objData["humidity-offset"].trim(),
+                        "mqttpwd " + objData["mqtt-password"].trim(),
+                        "backup all",
+                        "restore defaults"
+                    ], // the list of commands
+                    1000, // how long to wait between sending each command
+                    'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                    500, // the time to wait after that many lines before closing the port
+                    callback, // the function to call after closing the port
+                    null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
+                    null // function to call after all commands have been sent [null because we are just going to close the port when done]
+                );
+            }
         },
         function(callback) {
             disconnectAllOpenSerialPorts(callback);
@@ -356,6 +412,7 @@ router.get('/startcalibration', function(req, res, next) {
                 "opmode offline",
                 "temp_off 0",
                 "hum_off 0",
+                "pm_off 0",
                 "backup all",
                 "exit"
             ];
@@ -598,7 +655,7 @@ router.post('/applynetworksettings', function(req, res, next) {
             sendCommandList(
                 sp, // the port to target
                 null, // on serial port open, [null because we are going to the close the port before we're done]
-                22, // number of lines before starting to issue commands
+                18, // number of lines before starting to issue commands
                 [
                     "aqe",
                     "restore defaults",
@@ -623,40 +680,50 @@ router.post('/applynetworksettings', function(req, res, next) {
 });
 
 router.post('/clearwifisettings', function(req, res, next) {
-    async.forEach(allPorts, function(port, callback) {
-        var serialNumber = port.serialNumber;
 
-        if(!serialNumber){ // no data for this port was sent
-            callback(null);
-        }
-        else {
-            var sp = new SerialPort(port.comName, {
-                baudrate: 115200,
-                parser: serialPort.parsers.readline("\n")
+    async.series([
+        function(callback) {
+            disconnectAllOpenSerialPorts(callback);
+        },
+        function(parentCallback) {
+            async.forEach(allPorts, function (port, callback) {
+                var serialNumber = port.serialNumber;
+
+                if (!serialNumber) { // no data for this port was sent
+                    callback(null);
+                }
+                else {
+                    var sp = new SerialPort(port.comName, {
+                        baudrate: 115200,
+                        parser: serialPort.parsers.readline("\n")
+                    });
+
+                    sendCommandList(
+                        sp, // the port to target
+                        null, // on serial port open, [null because we are going to the close the port before we're done]
+                        22, // number of lines before starting to issue commands
+                        [
+                            "aqe",
+                            "restore defaults",
+                        ], // the list of commands
+                        1000, // how long to wait between sending each command
+                        'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                        500, // the time to wait after that many lines before closing the port
+                        callback, // the function to call after closing the port
+                        null, // what to do whenever you get a data line, [null because we are not processing Egg output]
+                        null, // function to call after all commands have been sent [null because we are going to callback when we close the port]
+                        {"serialNumber": serialNumber}
+                    );
+                }
+            }, function (err) {
+                disconnectAllOpenSerialPorts();
+                parentCallback();
             });
-
-            sendCommandList(
-                sp, // the port to target
-                null, // on serial port open, [null because we are going to the close the port before we're done]
-                22, // number of lines before starting to issue commands
-                [
-                    "aqe",
-                    "restore defaults",
-                ], // the list of commands
-                1000, // how long to wait between sending each command
-                'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
-                500, // the time to wait after that many lines before closing the port
-                callback, // the function to call after closing the port
-                null, // what to do whenever you get a data line, [null because we are not processing Egg output]
-                null, // function to call after all commands have been sent [null because we are going to callback when we close the port]
-                {"serialNumber": serialNumber}
-            );
         }
-    },function(err){
-        disconnectAllOpenSerialPorts();
+    ],
+    function(err){
         res.json(allPorts);
     });
-
 });
 
 

@@ -54,10 +54,16 @@ $(function(){
             $("#feedback").text("Committing Serial Data...");
 
             $.post("/serialports/commit/" + $("#serial_ports option:selected").val(), {
-                    "co-sensitivity": $("#form-data-co-sensitivity").text(),
-                    "co-offset": $("#form-data-co-offset").text(),
                     "no2-sensitivity": $("#form-data-no2-sensitivity").text(),
                     "no2-offset": $("#form-data-no2-offset").text(),
+                    "co-sensitivity": $("#form-data-co-sensitivity").text(),
+                    "co-offset": $("#form-data-co-offset").text(),
+                    "so2-sensitivity": $("#form-data-so2-sensitivity").text(),
+                    "so2-offset": $("#form-data-so2-offset").text(),
+                    "o3-sensitivity": $("#form-data-o3-sensitivity").text(),
+                    "o3-offset": $("#form-data-o3-offset").text(),
+                    "temperature-offset": $("#form-data-temperature-offset").text(),
+                    "humidity-offset": $("#form-data-humidity-offset").text(),
                     "mqtt-password": $("#form-data-open-sensors-password").text()
                 },
                 function () {
