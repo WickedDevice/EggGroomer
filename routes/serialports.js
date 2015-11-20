@@ -20,6 +20,14 @@ function stripTrailingBarAndTrim(str){
     return str.substring(0, str.lastIndexOf("|")).trim();
 }
 
+function removeLeadingBarAndTrim(str){
+    var tmp = str.trim();
+    if(tmp[0] == '|' && tmp.length > 1){
+        tmp = tmp.substring(1);
+    }
+    return tmp.trim();
+}
+
 function backedUpOrNot(str){
     if(str.trim() == ""){
         return "Backed Up";
@@ -132,7 +140,6 @@ function sendCommandList(sp, functionToCallOnSpOpen, numLinesToWaitForInitially,
 }
 
 var fieldStringSplitMap = [
-    {"  |       Firmware Version ": ["Shipped Firmware Version", stripTrailingBarAndTrim]},
     {"    MAC Address: ": ["CC3000 MAC address", null]},
     {" MQTT Password backed up?": ["Open Sensors .io password", backedUpOrNot]},
     {"    CO Sensitivity [nA/ppm]: ": ["CO Sensitivity", null]},
@@ -146,7 +153,6 @@ var fieldStringSplitMap = [
     {"    Temperature Reporting Offset [degC]: ": ["Temperature Offset", null]},
     {"    Humidity Reporting Offset [%]: ": ["Humidity Offset", null]},
     {"    MQTT Client ID: ": ["OpenSensors Username", null]}
-
 ];
 
 function getSerialNumberForPort(portName){
@@ -159,14 +165,23 @@ function getSerialNumberForPort(portName){
 }
 
 var portToFirmwareVersionMap = {};
-
+var portToSensorTypeMap = {};
 function setFirmwareVersionForPort(portName, firmwareVersion){
     portToFirmwareVersionMap[portName] = firmwareVersion;
     return;
 }
 
+function setSensorTypeForPort(portName, sensorType){
+    portToSensorTypeMap[portName] = sensorType;
+    return;
+}
+
 function getFirmwareVersionForPort(portName){
     return portToFirmwareVersionMap[portName];
+}
+
+function getSensorTypeForPort(portName){
+    return portToSensorTypeMap[portName];
 }
 
 var openPortsDataLineProcessing = function(args){ // what to do whenever you get a data line [collect the table data into global object]
@@ -179,19 +194,36 @@ var openPortsDataLineProcessing = function(args){ // what to do whenever you get
         serialNumber = parts[1];
         if(obj) {
             obj.serialNumber = serialNumber;
+            obj.sensorType = getSensorTypeForPort(portName);
             allPorts.push(obj);
         }
         dataRecordBySerialNumber[serialNumber] = {};
         dataRecordBySerialNumber[serialNumber]["Shipped Firmware Version"] = [getFirmwareVersionForPort(portName)];
+        dataRecordBySerialNumber[serialNumber]["Sensor Type"] = [getSensorTypeForPort(portName)];
         dataRecordBySerialNumber[serialNumber]["comName"] = portName;
     }
 
-    parts = data.split("   Firmware Version ");
-    if(parts.length > 1){
-        var firmwareVersion = stripTrailingBarAndTrim(parts[1]);
-        setFirmwareVersionForPort(portName, firmwareVersion)
+    var flag = false;
+
+    if(!flag) {
+        parts = data.split("   Firmware Version ");
+        if (parts.length > 1) {
+            var firmwareVersion = stripTrailingBarAndTrim(parts[1]);
+            setFirmwareVersionForPort(portName, firmwareVersion)
+            flag = true;
+        }
     }
-    else{
+
+    if(!flag){
+        parts = data.split("Sensor Suite");
+        if(parts.length > 1) {
+            var sensorType = removeLeadingBarAndTrim(parts[0]);
+            setSensorTypeForPort(portName, sensorType);
+            flag = true;
+        }
+    }
+
+    if(!flag){
         var found = false;
         for(var entry in fieldStringSplitMap){
             for(var key in fieldStringSplitMap[entry]){ // there will only be one

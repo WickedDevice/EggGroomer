@@ -20,7 +20,7 @@ function listPorts(){
             var obj = data[i];
             $('#serial_ports').append('<option value="' + obj.serialNumber + '">' + obj.serialNumber + '</option>');
             attachedEggs.push(JSON.parse(JSON.stringify(obj)));
-            $('#list-of-serial-numbers').html($('#list-of-serial-numbers').html() + obj.serialNumber + "<br/>");
+            $('#list-of-serial-numbers').html($('#list-of-serial-numbers').html() + obj.serialNumber + " " + obj.sensorType + "<br/>");
         }
 
         $("#feedback").css("background-color", "green");
@@ -102,7 +102,8 @@ $(function(){
                     {"SO2 Sensor Zero Value": "#serial-data-so2-offset"},
                     {"Temperature Offset": "#serial-data-temperature-offset"},
                     {"Humidity Offset": "#serial-data-humidity-offset"},
-                    {"OpenSensors Username": "#serial-data-open-sensors-username"}
+                    {"OpenSensors Username": "#serial-data-open-sensors-username"},
+                    {"Sensor Type": "#sensor-type"}
                 ];
 
                 $("#comName").text(data["comName"]);
