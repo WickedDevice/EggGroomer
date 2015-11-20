@@ -14,11 +14,13 @@ function listPorts(){
         console.log(JSON.stringify(data));
 
         $('#serial_ports').find('option[value!=0]').remove();
+        $('#list-of-serial-numbers').html("");
 
         for(var i = 0; i < data.length; i++){
             var obj = data[i];
             $('#serial_ports').append('<option value="' + obj.serialNumber + '">' + obj.serialNumber + '</option>');
             attachedEggs.push(JSON.parse(JSON.stringify(obj)));
+            $('#list-of-serial-numbers').html($('#list-of-serial-numbers').html() + obj.serialNumber + "<br/>");
         }
 
         $("#feedback").css("background-color", "green");
