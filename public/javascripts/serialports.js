@@ -55,6 +55,12 @@ $(function(){
             $("#feedback").css("color", "black");
             $("#feedback").text("Committing Serial Data...");
 
+            var temperatureOffset = $("#form-data-temperature-offset").text();
+            if(temperatureOffset.trim() == "") temperatureOffset = "0.0";
+
+            var humidityOffset = $("#form-data-humidity-offset").text();
+            if(humidityOffset.trim() == "") humidityOffset = "0.0";
+
             $.post("/serialports/commit/" + $("#serial_ports option:selected").val(), {
                     "no2-sensitivity": $("#form-data-no2-sensitivity").text(),
                     "no2-offset": $("#form-data-no2-offset").text(),
@@ -64,8 +70,8 @@ $(function(){
                     "so2-offset": $("#form-data-so2-offset").text(),
                     "o3-sensitivity": $("#form-data-o3-sensitivity").text(),
                     "o3-offset": $("#form-data-o3-offset").text(),
-                    "temperature-offset": $("#form-data-temperature-offset").text(),
-                    "humidity-offset": $("#form-data-humidity-offset").text(),
+                    "temperature-offset": temperatureOffset,
+                    "humidity-offset": humidityOffset,
                     "mqtt-password": $("#form-data-open-sensors-password").text()
                 },
                 function () {
