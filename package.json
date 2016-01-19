@@ -13,7 +13,7 @@
     "jade": "~1.9.2",
     "morgan": "~1.5.3",
     "serve-favicon": "~2.2.1",
-    "serialport": "1.6.x",
+    "serialport": "~2.0.6",
     "bootstrap": "3.3.5",
     "async-waterfall": "0.1.5",
     "async": "1.4.2",
