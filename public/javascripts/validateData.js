@@ -18,6 +18,7 @@ var fields_of_interest_ids_no_prefix = [
     "data-so2-date-code",
     "data-so2-sensitivity",
     "data-so2-offset",
+	"data-pm-offset",
     "data-date-shipped",
     "data-customer-name",
     "data-customer-email",
@@ -183,7 +184,8 @@ function validatePopulatedData(){
     if(!validateRowNotEmpty("data-co-offset")){ ret = false; }
     if(!validateOffset("data-no2-offset")){ ret = false; }
     if(!validateRowNotEmpty("data-no2-offset")){ ret = false; }
-
+    if(!validateRowNotEmpty("data-pm-offset")){ ret = false; }
+	
     if(!validateFormFieldNotEmpty("data-o3-serial-number")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-o3-date-code")){ ret = false; }
     if(!validateFormFieldNotEmpty("data-so2-serial-number")){ ret = false; }

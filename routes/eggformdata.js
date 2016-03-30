@@ -48,6 +48,8 @@ function loadDatabase(callback){
                     field_map[first_row[field]] = field;
                 }
 
+                console.log(field_map);
+
                 // go through each row and add it to the database
                 var num_rows = Object.keys(rows).length;
 
@@ -56,8 +58,16 @@ function loadDatabase(callback){
                     //if(i == 328){
                     //    console.log(rows[i]);
                     //}
+                    var egg_serial_number ;
+                    try{
+                       egg_serial_number = rows[i][field_map["SHT25 / Egg Serial Number"]];
+                    } 
+                    catch(exception){
+                       console.log("Row " + i + " has some problem");
+                       continue;
+                    }
+                    
 
-                    var egg_serial_number = rows[i][field_map["SHT25 / Egg Serial Number"]];
                     // if egg_serial_number has a leading appostrophe, remove it.
                     if(!egg_serial_number){
                         egg_serial_number = "";

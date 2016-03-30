@@ -46,6 +46,7 @@ function loadFormDataForEgg(serialNumber, reload){
             {"SO2 Sensor Date Code": "#form-data-so2-date-code"},
             {"SO2 Sensitivity": "#form-data-so2-sensitivity"},
             {"SO2 Sensor Zero Value": "#form-data-so2-offset"},
+			{"Particulate Sensor Zero Value": "#form-data-pm-offset"},
             {"Date Shipped to customer": "#form-data-date-shipped"},
             {"Customer Name": "#form-data-customer-name"},
             {"Customer Email": "#form-data-customer-email"},

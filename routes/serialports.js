@@ -150,6 +150,7 @@ var fieldStringSplitMap = [
     {"    O3 Offset [V]: ": ["O3 Sensor Zero Value", null]},
     {"    SO2 Sensitivity [nA/ppm]: ": ["SO2 Sensitivity", null]},
     {"    SO2 Offset [V]: ": ["SO2 Sensor Zero Value", null]},
+	{"    PM Offset [V]: ": ["Particulate Sensor Zero Value", null]},
     {"    Temperature Reporting Offset [degC]: ": ["Temperature Offset", null]},
     {"    Humidity Reporting Offset [%]: ": ["Humidity Offset", null]},
     {"    MQTT Client ID: ": ["OpenSensors Username", null]}
@@ -374,6 +375,28 @@ function commitValuesToSerialPort(objData, portName, parentCallback){
                     null // function to call after all commands have been sent [null because we are just going to close the port when done]
                 );
             }
+            else if(objData["pm-offset"].trim() != ""){
+                sendCommandList(
+                    sp, // the port to target
+                    null, // on serial port open [null because we don't need to hang on to the handles]
+                    22, // number of lines before starting to issue commands
+                    [
+                        "aqe",                        
+                        "pm_off " + objData["pm-offset"].trim(),
+                        "temp_off " + objData["temperature-offset"].trim(),
+                        "hum_off " + objData["humidity-offset"].trim(),
+                        "mqttpwd " + objData["mqtt-password"].trim(),
+                        "backup all",
+                        "restore defaults"
+                    ], // the list of commands
+                    1000, // how long to wait between sending each command
+                    'Info: Erasing mirrored config...OK.', // close if you receive a line that contains this string
+                    500, // the time to wait after that many lines before closing the port
+                    callback, // the function to call after closing the port
+                    null, // what to do whenever you get a data line, [null because we aren't consuming the Egg output in this function]
+                    null // function to call after all commands have been sent [null because we are just going to close the port when done]
+                );
+            }			
             else{
                 sendCommandList(
                     sp, // the port to target
